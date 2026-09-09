@@ -62,6 +62,7 @@
 
   .meter{margin:2px 10px 0; height:6px; border-radius:4px; background:#222; border:1px solid var(--line); overflow:hidden; position:relative;}
   .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--ok),var(--gold),var(--rec)); transition:width .06s linear;}
+  .meter > b{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--gold); opacity:.55;}
 
   .interim{margin:4px 10px 0; min-height:20px; font-size:12.5px; color:var(--gold-deep); font-style:italic; line-height:1.4; white-space:pre-wrap; word-break:break-word; display:flex; align-items:flex-start; gap:6px;}
   .interim .txt{flex:1 1 auto;}
@@ -167,7 +168,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1b</div>
+    <div class="ver">Version 1c</div>
   </div>
 
   <div id="notice"></div>
@@ -176,7 +177,7 @@
     <button id="btnRec" class="rec" type="button">&#9679; Start dictation</button>
     <button id="btnStop" class="sm" type="button" title="Stop" disabled>&#9632;</button>
   </div>
-  <div class="meter"><i id="meterBar"></i></div>
+  <div class="meter"><i id="meterBar"></i><b id="meterGate" hidden></b></div>
   <div class="interim" aria-live="polite"><span class="txt" id="interim"></span><button class="q" id="btnCmdsQuick" type="button">? commands</button></div>
 
   <textarea id="memo" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Your dictated text appears here. You can also type, paste, or drop a .txt file. Everything is saved on this device automatically."></textarea>
@@ -207,9 +208,16 @@
       <div class="rowbtns">
         <button id="btnNewNote" type="button">&#10133; New note</button>
         <button id="btnRenameNote" class="sec" type="button">&#9998; Rename current</button>
+        <button id="btnNotesExport" class="sec" type="button">&#11015; Export all (JSON)</button>
+        <button id="btnNotesImport" class="sec" type="button">&#11014; Import notes</button>
       </div>
+      <input type="file" id="notesImportFile" accept="application/json,.json" hidden>
     </div>
-    <div class="grp"><div class="lbl">Saved notes</div><div class="notes" id="notesList"></div></div>
+    <div class="grp">
+      <div class="lbl">Saved notes</div>
+      <div class="field"><input type="text" id="notesSearch" placeholder="Search notes…" style="max-width:100%;flex:1 1 100%"></div>
+      <div class="notes" id="notesList"></div>
+    </div>
   </div>
 
   <!-- EXPORT -->
@@ -279,6 +287,8 @@
         <button id="btnGrammarFixAll" type="button">&#10003; Fix all</button>
         <button id="btnGrammarClear" class="sec" type="button">Clear results</button>
       </div>
+      <div class="field"><label for="gStyle">Include style suggestions</label><span class="sw"><input type="checkbox" id="gStyle"><i></i></span></div>
+      <div class="field"><span class="hint">Adds non-error hints: filler words (very, really, just&hellip;), possible passive voice, over-long sentences.</span></div>
       <div class="field"><label for="gLT">Also use LanguageTool (online)</label><span class="sw"><input type="checkbox" id="gLT"><i></i></span></div>
       <div class="field"><span class="hint" id="gLTHint">Off = quick offline checks only (spacing, repeats, capitalisation, a/an, common slips). On = also sends the text to api.languagetool.org for a deeper check. Tap a result to jump to it.</span></div>
     </div>
@@ -330,6 +340,20 @@
 
     <div class="grp">
       <div class="lbl">Dictation</div>
+      <div class="field"><label for="setEngine">Speech engine</label>
+        <select id="setEngine">
+          <option value="web">Google &mdash; online, most accurate</option>
+          <option value="whisper">Whisper &mdash; offline &amp; private (experimental)</option>
+        </select>
+      </div>
+      <div class="field" id="fldWhisper" style="display:none"><label for="setWhisperModel">Whisper model</label>
+        <select id="setWhisperModel">
+          <option value="Xenova/whisper-tiny.en">Tiny &middot; ~40 MB &middot; fastest</option>
+          <option value="Xenova/whisper-base.en">Base &middot; ~75 MB &middot; balanced</option>
+          <option value="Xenova/whisper-small.en">Small &middot; ~250 MB &middot; best</option>
+        </select>
+      </div>
+      <div class="field" id="fldWhisperHint" style="display:none"><span class="hint">Runs entirely on your device &mdash; nothing is sent to a server. The first time you use a model it downloads once (then works offline). Transcribes in short bursts as you pause, so it isn&rsquo;t word-by-word live. Needs a reasonably powerful phone/PC.</span></div>
       <div class="field"><label for="setMode">Mode</label>
         <select id="setMode">
           <option value="continuous">Hands-free (continuous)</option>
@@ -374,6 +398,9 @@
       <div class="rowbtns"><button id="btnMicTest" type="button">&#127908; Test microphone</button></div>
       <div class="field"><span class="hint" id="micStat"></span></div>
       <ul class="mic-list" id="micList"></ul>
+      <div class="field"><label for="setGain">Input gain</label><input type="range" id="setGain" min="0.5" max="3" step="0.1" value="1"><span id="setGainV" style="color:var(--gold);width:34px;text-align:right">1.0</span></div>
+      <div class="field"><label for="setGate">Noise gate</label><input type="range" id="setGate" min="0.003" max="0.05" step="0.001" value="0.012"><span id="setGateV" style="color:var(--gold);width:44px;text-align:right">0.012</span></div>
+      <div class="field"><span class="hint">Gain and gate apply to the <b>Whisper</b> engine and the level meter (they can&rsquo;t change what Google&rsquo;s engine hears). The gate mark on the meter is the level Whisper treats as speech.</span></div>
     </div>
 
     <div class="grp">
@@ -386,6 +413,8 @@
           <option value="en-ca">Canadian English</option>
         </select>
       </div>
+      <div class="field"><span class="hint">Personal dictionary (words you added). Tap a word to remove it.</span></div>
+      <div class="rowbtns" id="userDictList"></div>
     </div>
 
     <div class="grp">
@@ -395,7 +424,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1b. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1c. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -421,9 +450,10 @@ function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({"&":"
 
 /* ---------- settings ---------- */
 var DEF = {
+  engine:"web", whisperModel:"Xenova/whisper-base.en", micGain:1, noiseGate:0.012,
   mode:"continuous", lang:"en-AU", silence:0, punct:true, numbers:false, cap:true, interim:true,
   continuous:true, profanity:false, wake:true, insertAtCursor:false, dict:"en-au", font:18,
-  ttsVoice:"", ttsRate:1, ttsPitch:1, ttsVol:1, ttsFollow:true, useLT:false
+  ttsVoice:"", ttsRate:1, ttsPitch:1, ttsVol:1, ttsFollow:true, useLT:false, style:false
 };
 var S = load();
 function load(){ try{ return Object.assign({}, DEF, JSON.parse(LS.getItem("dsrdict.cfg")||"{}")); }catch(e){ return Object.assign({}, DEF); } }
@@ -473,7 +503,11 @@ function switchNote(id){
 }
 function renderNotes(){
   var box = $("#notesList"); box.innerHTML = "";
-  notes.slice().sort(function(a,b){ return b.updated - a.updated; }).forEach(function(n){
+  var q = ($("#notesSearch").value || "").toLowerCase().trim();
+  var list = notes.slice().sort(function(a,b){ return b.updated - a.updated; });
+  if(q) list = list.filter(function(n){ return (n.name||"").toLowerCase().indexOf(q) >= 0 || (n.text||"").toLowerCase().indexOf(q) >= 0; });
+  if(!list.length){ box.innerHTML = "<div class='empty' style='color:var(--gold-deep);padding:8px 2px'>No matching notes.</div>"; return; }
+  list.forEach(function(n){
     var row = document.createElement("div"); row.className = "nrow" + (n.id===curId ? " active" : "");
     var info = document.createElement("div"); info.className = "info";
     info.innerHTML = "<div class='nm'>" + esc(n.name||"Untitled") + "</div><div class='pv'>" + esc((n.text||"").replace(/\s+/g," ").slice(0,60) || "(empty)") + "</div><div class='dt'>" + new Date(n.updated).toLocaleString() + "</div>";
@@ -499,6 +533,34 @@ $("#btnNewNote").addEventListener("click", function(){
   notes.push(fresh); curId = fresh.id; persistNotes();
   memo.value = ""; undoStack=[]; redoStack=[]; onMemoChanged(); paintNoteName(); renderNotes();
   toast("New note");
+});
+$("#notesSearch").addEventListener("input", renderNotes);
+$("#btnNotesExport").addEventListener("click", function(){
+  var n = getNote(curId); if(n) n.text = memo.value;
+  var blob = new Blob([JSON.stringify({ app:"DSR Dictation", exported:new Date().toISOString(), notes:notes }, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "dsr-dictation-notes-" + stamp() + ".json";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+});
+$("#btnNotesImport").addEventListener("click", function(){ $("#notesImportFile").click(); });
+$("#notesImportFile").addEventListener("change", function(){
+  var file = this.files && this.files[0]; if(!file) return;
+  file.text().then(function(txt){
+    var data; try{ data = JSON.parse(txt); }catch(e){ toast("Not a valid JSON file"); return; }
+    var incoming = Array.isArray(data) ? data : (data && data.notes);
+    if(!Array.isArray(incoming) || !incoming.length){ toast("No notes found in that file"); return; }
+    var added = 0;
+    incoming.forEach(function(n){
+      if(!n || typeof n.text !== "string") return;
+      notes.push({ id: uid(), name: (n.name || nameFrom(n.text)).slice(0,60), text: n.text,
+                   created: n.created || Date.now(), updated: Date.now() });
+      added++;
+    });
+    persistNotes(); renderNotes();
+    toast("Imported " + added + " note" + (added !== 1 ? "s" : ""));
+  });
+  this.value = "";
 });
 $("#btnRenameNote").addEventListener("click", function(){
   var n = getNote(curId); if(!n) return;
@@ -551,7 +613,7 @@ function openSheet(name){
   closeSheet();
   var s = $("#sheet-"+name); if(!s) return;
   s.classList.add("show"); backdrop.classList.add("show");
-  if(name==="settings") refreshMicList(false);
+  if(name==="settings"){ refreshMicList(false); renderUserDict(); }
   if(name==="notes") renderNotes();
   if(name==="edit") refreshStats();
   if(name==="cmds") renderCmds();
@@ -572,6 +634,8 @@ $("#btnCmds").addEventListener("click", function(){ openSheet("cmds"); });
 var Recog = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 var rec = null, mode = "idle", manualStop = false, lastStart = 0, restartT = null;
 var lastInsert = "", lastInsertRange = null, silenceT = null, capsLock = false;
+var whisper = { pipe:null, loading:null, model:"", ctx:null, stream:null, node:null, mute:null, src:null,
+                buf:[], bufLen:0, speaking:false, quiet:0, busy:false, queue:[], active:false };
 
 function notice(html){ var n=$("#notice"); if(!html){ n.classList.remove("show"); return; } n.innerHTML = html; n.classList.add("show"); }
 
@@ -616,13 +680,15 @@ function onError(e){
 }
 function armSilence(){
   clearTimeout(silenceT);
-  if(S.mode === "continuous" && +S.silence > 0 && mode === "listening"){
+  if(S.mode === "ptt") return;
+  if(+S.silence > 0 && mode === "listening"){
     silenceT = setTimeout(function(){ if(mode==="listening"){ pauseRec(); toast("Paused after " + S.silence + "s silence"); } }, +S.silence * 1000);
   }
 }
 function startRec(){
-  if(!Recog) return;
   notice("");
+  if(S.engine === "whisper"){ whisperStart(); return; }
+  if(!Recog) return;
   if(!rec) buildRec();
   rec.interimResults = S.interim;
   rec.lang = S.lang;
@@ -637,14 +703,16 @@ function pauseRec(){
   manualStop = true; mode = "paused";
   clearTimeout(restartT); clearTimeout(silenceT);
   try{ rec && rec.stop(); }catch(e){}
-  reflectMode(); stopMeter(); relWake();
+  if(whisper.active || whisper.ctx) whisperStop();
+  reflectMode(); stopMeter(); relWake(); paintGateMark();
   $("#interim").textContent = "";
 }
 function setModeIdle(){
   manualStop = true; mode = "idle";
   clearTimeout(restartT); clearTimeout(silenceT);
   try{ rec && rec.stop(); }catch(e){}
-  reflectMode(); stopMeter(); relWake();
+  if(whisper.active || whisper.ctx) whisperStop();
+  reflectMode(); stopMeter(); relWake(); paintGateMark();
   $("#interim").textContent = ""; setMsg("");
 }
 function reflectMode(){
@@ -841,6 +909,114 @@ function wordsToNumbers(text){
 }
 
 /* ================================================================
+   WHISPER ENGINE  (transformers.js, fully on-device)
+   ================================================================ */
+function setMeterRms(rms){ $("#meterBar").style.width = Math.min(100, Math.round(rms * 260)) + "%"; }
+function paintGateMark(){
+  var g = $("#meterGate");
+  if(S.engine === "whisper" && mode !== "idle"){ g.hidden = false; g.style.left = Math.min(98, (+S.noiseGate) * 260) + "%"; }
+  else g.hidden = true;
+}
+function whisperLoad(){
+  if(whisper.pipe && whisper.model === S.whisperModel) return Promise.resolve(whisper.pipe);
+  if(whisper.loading) return whisper.loading;
+  setMsg("Loading Whisper (" + S.whisperModel.split("/").pop() + ")…");
+  whisper.loading = import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2").then(function(t){
+    t.env.allowLocalModels = false;
+    return t.pipeline("automatic-speech-recognition", S.whisperModel, {
+      progress_callback: function(p){
+        if(p && p.status === "progress" && p.progress != null) setMsg("Downloading model " + Math.round(p.progress) + "%");
+        else if(p && p.status === "ready") setMsg("Whisper ready");
+      }
+    });
+  }).then(function(pipe){
+    whisper.pipe = pipe; whisper.model = S.whisperModel; whisper.loading = null; setMsg("Whisper ready"); return pipe;
+  }).catch(function(e){ whisper.loading = null; throw e; });
+  return whisper.loading;
+}
+function whisperStart(){
+  if(!navigator.mediaDevices || !window.AudioContext && !window.webkitAudioContext){ toast("Audio capture not supported"); return; }
+  manualStop = false; mode = "listening"; reflectMode(); paintGateMark();
+  if(S.wake) reqWake();
+  if(window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.cancel();
+  setMsg("Loading Whisper…");
+  whisperLoad().then(function(){
+    return navigator.mediaDevices.getUserMedia({ audio: { channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+  }).then(function(stream){
+    if(mode !== "listening"){ stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx; try{ ctx = new AC({ sampleRate: 16000 }); }catch(e){ ctx = new AC(); }
+    whisper.active = true; whisper.stream = stream; whisper.ctx = ctx;
+    whisper.src = ctx.createMediaStreamSource(stream);
+    var n = ctx.createScriptProcessor(4096, 1, 1);
+    var mute = ctx.createGain(); mute.gain.value = 0;
+    whisper.node = n; whisper.mute = mute;
+    whisper.buf = []; whisper.bufLen = 0; whisper.speaking = false; whisper.quiet = 0; whisper.queue = [];
+    var sr = ctx.sampleRate || 16000;
+    n.onaudioprocess = function(ev){
+      if(!whisper.active) return;
+      var inp = ev.inputBuffer.getChannelData(0);
+      var f = new Float32Array(inp.length);
+      var g = +S.micGain || 1, sum = 0;
+      for(var i = 0; i < inp.length; i++){ var v = inp[i] * g; f[i] = v; sum += v * v; }
+      var rms = Math.sqrt(sum / inp.length);
+      setMeterRms(rms);
+      var gate = +S.noiseGate || 0.012;
+      if(rms > gate){
+        whisper.speaking = true; whisper.quiet = 0;
+        whisper.buf.push(f); whisper.bufLen += f.length;
+        armSilence();
+      } else if(whisper.speaking){
+        whisper.buf.push(f); whisper.bufLen += f.length; whisper.quiet++;
+        if(whisper.quiet >= Math.round(sr / 4096 * 0.6) && whisper.bufLen > sr * 0.4) whisperFlush(sr);
+      }
+      if(whisper.bufLen > sr * 20) whisperFlush(sr);
+    };
+    whisper.src.connect(n); n.connect(mute); mute.connect(ctx.destination);
+    setMsg("Listening (Whisper)…");
+  }).catch(function(e){
+    setModeIdle();
+    notice("<b>Whisper couldn&rsquo;t start.</b> " + esc(String((e && e.message) || e)) + " &mdash; switch back to the Google engine in Settings, or try a smaller model.");
+  });
+}
+function whisperFlush(sr){
+  if(!whisper.bufLen) return;
+  var total = whisper.bufLen, merged = new Float32Array(total), off = 0;
+  whisper.buf.forEach(function(fr){ merged.set(fr, off); off += fr.length; });
+  var tailN = Math.min(total, Math.round(sr * 0.2));
+  var tail = merged.slice(total - tailN);
+  whisper.buf = [tail]; whisper.bufLen = tail.length; whisper.speaking = false; whisper.quiet = 0;
+  whisper.queue.push(merged);
+  whisperDrain();
+}
+function whisperDrain(){
+  if(whisper.busy || !whisper.queue.length || !whisper.pipe) return;
+  whisper.busy = true;
+  var audio = whisper.queue.shift();
+  setMsg("Transcribing…");
+  // English-only (.en) models reject `task`/`language`; all bundled options are .en
+  whisper.pipe(audio, { chunk_length_s: 30 }).then(function(out){
+    var txt = ((out && out.text) || "").trim();
+    if(txt && !/^[\(\[].*[\)\]]$/.test(txt) && !/^(you|thank you\.?|thanks for watching\.?|bye\.?)$/i.test(txt)) commit(txt);
+  }).catch(function(){}).finally(function(){
+    whisper.busy = false;
+    setMsg(mode === "listening" ? "Listening (Whisper)…" : "");
+    whisperDrain();
+  });
+}
+function whisperStop(){
+  whisper.active = false;
+  try{ if(whisper.node){ whisper.node.onaudioprocess = null; whisper.node.disconnect(); } }catch(e){}
+  try{ whisper.mute && whisper.mute.disconnect(); }catch(e){}
+  try{ whisper.src && whisper.src.disconnect(); }catch(e){}
+  try{ whisper.ctx && whisper.ctx.close(); }catch(e){}
+  try{ whisper.stream && whisper.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  whisper.ctx = whisper.stream = whisper.node = whisper.src = whisper.mute = null;
+  whisper.buf = []; whisper.bufLen = 0; whisper.queue = []; whisper.speaking = false;
+  $("#meterBar").style.width = "0%"; $("#meterGate").hidden = true;
+}
+
+/* ================================================================
    MIC LEVEL METER + DEVICE LIST
    ================================================================ */
 var meterStream = null, meterCtx = null, meterRAF = null;
@@ -1017,6 +1193,26 @@ function selectRange(a, b){
    SPELL CHECK
    ================================================================ */
 var speller = null, spellerFor = "", spellLoading = null, spellIgnore = {};
+var userDict = [];
+try{ userDict = JSON.parse(LS.getItem("dsrdict.userdict") || "[]") || []; }catch(e){ userDict = []; }
+function saveUserDict(){ try{ LS.setItem("dsrdict.userdict", JSON.stringify(userDict)); }catch(e){} renderUserDict(); }
+function renderUserDict(){
+  var box = $("#userDictList"); if(!box) return;
+  box.innerHTML = "";
+  if(!userDict.length){ box.innerHTML = "<span class='hint' style='padding:2px'>None yet.</span>"; return; }
+  userDict.forEach(function(w){
+    var b = document.createElement("button"); b.className = "sec"; b.style.flex = "0 0 auto";
+    b.textContent = w + "  ×";
+    b.addEventListener("click", function(){ userDict = userDict.filter(function(x){ return x !== w; }); if(speller){ try{ speller.remove(w); }catch(e){} } saveUserDict(); });
+    box.appendChild(b);
+  });
+}
+function addUserWord(w){
+  w = w.replace(/’/g, "'");
+  if(userDict.indexOf(w) < 0) userDict.push(w);
+  if(speller) speller.add(w);
+  saveUserDict();
+}
 var DICT_URLS = {
   "en-au": ["dictionary-en-au", "dictionary-en-gb"],
   "en-gb": ["dictionary-en-gb"],
@@ -1042,6 +1238,7 @@ function loadSpeller(){
       import("https://cdn.jsdelivr.net/npm/nspell@2.1.5/+esm").then(function(m){ return m.default || m; })
     ]).then(function(res){
       speller = res[1](res[0][0], res[0][1]);
+      userDict.forEach(function(w){ try{ speller.add(w); }catch(e){} });
       spellerFor = S.dict; spellLoading = null; setMsg(""); return speller;
     }).catch(function(e){ spellLoading = null; setMsg(""); throw e; });
   })();
@@ -1089,7 +1286,7 @@ function renderSpell(bad){
     ign.addEventListener("click", function(){ spellIgnore[rc.word.toLowerCase()] = 1; checkSpelling(); });
     sg.appendChild(ign);
     var add = document.createElement("button"); add.className = "ghost"; add.textContent = "Add";
-    add.addEventListener("click", function(){ if(speller) speller.add(rc.word.replace(/’/g,"'")); checkSpelling(); });
+    add.addEventListener("click", function(){ addUserWord(rc.word); checkSpelling(); });
     sg.appendChild(add);
     d.appendChild(sg);
     out.appendChild(d);
@@ -1129,6 +1326,14 @@ function offlineGrammar(t){
   if(first && /[a-z]/.test(first[0])) f.push({i: t.length - first.length, len:1, msg:"First letter should be a capital", rep:first[0].toUpperCase()});
   var tr = t.replace(/\s+$/, "");
   if(tr && !/[.!?)"'”…]$/.test(tr)) f.push({i: tr.length - 1, len:1, msg:"The text doesn't end with a full stop", rep: tr.slice(-1) + "."});
+  if(S.style){
+    re = /\b(very|really|just|quite|actually|basically|literally|simply|totally|definitely)\s+/gi;
+    while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Filler word “" + m[1] + "” – consider removing", rep:""});
+    re = /\b(is|are|was|were|be|been|being|been)\s+(\w+ed|written|done|made|given|taken|seen|known|shown|held)\b/gi;
+    while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Possible passive voice", rep:null});
+    re = /[^.!?\n]+[.!?]/g;
+    while((m = re.exec(t))){ var wc = (m[0].match(/\S+/g) || []).length; if(wc > 40) f.push({i:m.index, len:m[0].length, msg:"Long sentence (" + wc + " words) – consider splitting", rep:null}); }
+  }
   return f;
 }
 function ltGrammar(t){
@@ -1379,9 +1584,17 @@ function renderCmds(){
    ================================================================ */
 function bindToggle(id, key, after){ var el = $(id); el.checked = !!S[key]; el.addEventListener("change", function(){ S[key] = el.checked; save(); if(after) after(); }); }
 function bindSelect(id, key, after){ var el = $(id); el.value = S[key]; el.addEventListener("change", function(){ S[key] = el.value; save(); if(after) after(); }); }
+function whisperFieldsVis(){
+  var on = S.engine === "whisper";
+  $("#fldWhisper").style.display = on ? "" : "none";
+  $("#fldWhisperHint").style.display = on ? "" : "none";
+}
+bindSelect("#setEngine", "engine", function(){ setModeIdle(); whisperFieldsVis(); toast(S.engine === "whisper" ? "Whisper engine – downloads on first use" : "Google engine"); });
+bindSelect("#setWhisperModel", "whisperModel", function(){ whisper.pipe = null; whisper.model = ""; });
 bindSelect("#setMode", "mode", function(){ setModeIdle(); reflectMode(); });
-bindSelect("#setLang", "lang", function(){ if(rec) rec.lang = S.lang; if(mode === "listening"){ pauseRec(); startRec(); } loadVoices(); });
+bindSelect("#setLang", "lang", function(){ if(rec) rec.lang = S.lang; if(mode === "listening" && S.engine === "web"){ pauseRec(); startRec(); } loadVoices(); });
 bindSelect("#setSilence", "silence", armSilence);
+bindToggle("#gStyle", "style");
 bindToggle("#setPunct", "punct");
 bindToggle("#setNumbers", "numbers");
 bindToggle("#setCap", "cap");
@@ -1405,6 +1618,14 @@ function bindRange(id, vid, key){
 bindRange("#ttsRate", "#ttsRateV", "ttsRate");
 bindRange("#ttsPitch", "#ttsPitchV", "ttsPitch");
 bindRange("#ttsVol", "#ttsVolV", "ttsVol");
+(function(){
+  var g = $("#setGain"), gv = $("#setGainV"); g.value = S.micGain; gv.textContent = (+S.micGain).toFixed(1);
+  g.addEventListener("input", function(){ S.micGain = +g.value; gv.textContent = (+g.value).toFixed(1); save(); });
+  var q = $("#setGate"), qv = $("#setGateV"); q.value = S.noiseGate; qv.textContent = (+S.noiseGate).toFixed(3);
+  q.addEventListener("input", function(){ S.noiseGate = +q.value; qv.textContent = (+q.value).toFixed(3); save(); paintGateMark(); });
+})();
+whisperFieldsVis();
+$("#setWhisperModel").value = S.whisperModel;
 $("#ttsVoice").addEventListener("change", function(){ var v = voices[parseInt($("#ttsVoice").value)]; if(v){ S.ttsVoice = v.name; save(); } });
 $("#btnReset").addEventListener("click", function(){
   if(!confirm("Reset all settings to defaults? Your notes are kept.")) return;
@@ -1466,11 +1687,15 @@ function handleParams(){
    ================================================================ */
 loadNotes();
 $("#setMode").value = S.mode;
+$("#setEngine").value = S.engine;
+whisperFieldsVis();
+renderUserDict();
 updCount();
 reflectMode();
 handleParams();
 if(new URLSearchParams(location.search).get("debug") === "1"){
-  window.DSRDICT = { commit: commit, wordsToNumbers: wordsToNumbers, applyCaps: applyCaps, buildChunk: buildChunk, S: S };
+  window.DSRDICT = { commit: commit, wordsToNumbers: wordsToNumbers, applyCaps: applyCaps, buildChunk: buildChunk,
+                     offlineGrammar: offlineGrammar, whisper: whisper, whisperLoad: whisperLoad, S: S };
 }
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){ navigator.serviceWorker.register("service-worker.js").catch(function(){}); });

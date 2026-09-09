@@ -15,22 +15,32 @@ voices. Single-file web app in the DSR house style (gold-on-black), installable 
 | `manifest.json` | PWA manifest — includes `share_target` (share text into the app) and `shortcuts` |
 | `service-worker.js` | offline shell cache + cache-first for the jsDelivr spell dictionaries |
 
-## Speech engine — the free, highest-accuracy choice
-Live dictation uses the browser **Web Speech API** (`SpeechRecognition`). In Chrome — desktop
-and Android — this routes audio to **Google's speech service**, the same engine as Gboard voice
-typing. It is the most accurate speech-to-text usable **for free** with no API key and no
-backend, and the only option that is genuinely real-time on a phone. Requirements: Chrome /
-Chromium, an internet connection, HTTPS (GitHub Pages is fine).
+## Speech engines
+Two, switchable in Settings → Dictation:
+
+1. **Google (Web Speech API)** — default. In Chrome (desktop & Android) `SpeechRecognition`
+   routes audio to Google's speech service, the same engine as Gboard voice typing. Most
+   accurate free option, no API key / backend, and the only one that is truly word-by-word
+   real-time. Needs Chrome/Chromium, internet, HTTPS.
+2. **Whisper (offline & private)** — `@huggingface/transformers` (transformers.js) runs OpenAI
+   Whisper entirely on-device via WebAssembly / WebGPU. Nothing leaves the device. Model
+   (`whisper-tiny.en` ~40 MB / `base.en` ~75 MB / `small.en` ~250 MB) downloads once from the
+   Hugging Face CDN and is then cached for offline use. Captures the mic, applies a noise-gate
+   VAD, and transcribes in short bursts as you pause — not word-by-word live. Wants a
+   reasonably powerful device.
 
 Everything else — typing, spell check, grammar check, statistics, notes, Read aloud, export —
 works **offline** once the app (and, on first use, the ~1 MB dictionary) is cached.
 
-## Features (v1b)
+## Features (v1c)
 **Dictation**
-- Large auto-saving memo; **multiple named notes** (new / rename / duplicate / delete / switch),
-  each saved to `localStorage`.
+- **Two engines** (Google online / Whisper offline), selectable per use.
+- Large auto-saving memo; **multiple named notes** (new / rename / duplicate / delete / switch /
+  **search** / **export all + import** as JSON), each saved to `localStorage`.
 - Modes: **Hands-free (continuous)** with auto-restart after pauses, or **Push-to-talk** (hold
   the button). Optional **auto-pause after 10/20/30/60 s of silence**.
+- **Input gain** and **noise gate** sliders (drive the Whisper VAD and the level meter; the
+  gate level is marked on the meter).
 - Live **mic level meter**, interim ("as you speak") text, **screen wake-lock** while dictating.
 - **Spoken punctuation & commands** (full list in-app under "? commands"): full stop, comma,
   question mark, new line/paragraph, new bullet, open/close quote, brackets, hyphen/dash/ellipsis,
@@ -44,10 +54,12 @@ works **offline** once the app (and, on first use, the ~1 MB dictionary) is cach
 
 **After-the-fact proofing**
 - **Spelling** — real Hunspell dictionary (AU/GB/US/CA) via `nspell`; suggestions, Ignore, Add,
-  and **tap a word to jump to it** in the note.
+  and **tap a word to jump to it** in the note. **Personal dictionary persists** across sessions
+  and is managed in Settings.
 - **Grammar & style** — fast offline checks (double spaces, space before/after punctuation,
   repeated words, a/an, "could of", sentence capitalisation, trailing spaces, missing final
-  stop…) + optional deeper **LanguageTool** online check (opt-in). Per-item Fix, **overlap-safe
+  stop…) + optional **style suggestions** (filler words, possible passive voice, over-long
+  sentences) + optional deeper **LanguageTool** online check. Per-item Fix, **overlap-safe
   Fix-all**, tap-to-jump.
 - **Find & replace** (match case / whole word / replace all).
 - **Statistics** — words, characters, sentences, paragraphs, avg words/sentence, Flesch reading
@@ -72,18 +84,21 @@ Ctrl+F find · Ctrl+S download · Ctrl+Enter read aloud.
 `share_target` lets you share text from other apps into a new note; `shortcuts` give
 "New note" and "Start dictation" long-press actions.
 
+## Done in v1c (was backlog)
+- Offline **Whisper engine** (transformers.js) with tiny/base/small model choice.
+- Mic **input-gain / noise-gate** sliders with the gate marked on the meter.
+- **Persistent personal spelling dictionary** (managed in Settings).
+- Notes **search** + **export/import all** as JSON.
+- Grammar **style suggestions** (filler / passive / long sentence), opt-in.
+
 ## Backlog / roadmap
-- **Offline Whisper engine** (`transformers.js` + WebGPU) as a selectable "private, no-cloud"
-  option — model download (~75 MB base) and chunked, non-instant transcription; the Lazarus
-  build already covers Whisper for the desktop.
-- Real mic **input-gain / noise-gate calibration** with a visible threshold on the meter.
 - Grammar: subject–verb agreement, comma-splice and run-on detection; a proper (non-heuristic)
   offline grammar model.
-- Spell: personal dictionary that **persists** across sessions (currently session-only "Add").
-- Notes: search/filter, tags, folders; export/import all notes as one JSON; optional cloud
-  sync via a private Worker (as DSR Dashboard does).
+- Notes: tags / folders; optional cloud sync via a private Worker (as DSR Dashboard does).
 - Wider TTS voices: bundled **Piper** neural voices, or Edge/Azure neural voices via a Worker.
-- Number words: better handling of times, years, ordinals, phone numbers, currency.
+- Number words: better handling of times ("nine thirty"), years, ordinals, phone numbers, currency.
+- Whisper: WebGPU auto-detect + toggle; overlap tuning; word-level timestamps for follow-along;
+  optional multilingual model.
 - Punctuation-restoration model for engines that return unpunctuated text.
 - "Read along" that scrolls and highlights in a rendered overlay (not just textarea selection).
 - Language auto-detect; multi-language dictation switching mid-note.
