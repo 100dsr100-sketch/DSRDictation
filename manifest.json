@@ -1,0 +1,15 @@
+{
+  "name": "DSR Dictation",
+  "short_name": "Dictation",
+  "description": "Hands-free English dictation into a large notepad, with after-the-fact spell and grammar checking, clipboard export, and text-to-speech playback in a wide choice of voices.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

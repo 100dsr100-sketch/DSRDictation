@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="DSR Dictation">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>DSR Dictation</title>
+<style>
+  :root{
+    --gold:#FFD700; --gold-deep:#D4AF42; --bg:#000; --panel:#111; --panel2:#1a1a1a;
+    --field:#141414; --line:#3a2f10; --text:#eee; --dim:#bbb;
+    --rec:#ff4b4b; --ok:#57d977; --memo-fs:18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    background:var(--gold);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    color:var(--text); overscroll-behavior:none;
+  }
+  #app{
+    background:var(--bg); border-radius:10px; border:2px solid var(--gold-deep);
+    height:calc(100% - 10px); margin:5px;
+    display:flex; flex-direction:column; overflow:hidden; position:relative;
+  }
+
+  .banner{display:flex; align-items:center; gap:9px; padding:5px 12px; background:#000; border-bottom:1px solid var(--line);}
+  .banner img{width:32px; height:32px;}
+  .banner .t1{color:var(--gold); font-weight:700; font-size:16px; line-height:1.1;}
+  .banner .t2{color:var(--gold-deep); font-size:11px;}
+  .banner .ver{margin-left:auto; color:var(--gold); font-size:10px; font-weight:700;}
+
+  #notice{
+    background:#2a1a00; color:var(--gold); font-size:12px; line-height:1.45;
+    padding:7px 12px; border-bottom:1px solid var(--line); display:none;
+  }
+  #notice.show{display:block;}
+  #notice b{color:#fff;}
+
+  button,.btn{
+    appearance:none; border:1px solid var(--gold); background:var(--panel);
+    color:var(--gold); border-radius:8px; padding:7px 10px; font:inherit; font-size:12.5px;
+    font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    gap:6px; min-height:34px; flex:1 1 auto;
+  }
+  button:active,.btn:active{background:var(--panel2);}
+  button:disabled{opacity:.38;}
+  .btn.sec{border-color:var(--gold-deep); color:var(--gold-deep); min-height:30px; font-size:12px;}
+  .btn.wide{flex:1 1 100%;}
+
+  .ctl{padding:6px 10px 4px; display:flex; gap:6px;}
+  .ctl .rec{font-size:14px; min-height:42px; border-color:var(--ok); color:var(--ok);}
+  .ctl .rec.live{border-color:var(--rec); color:#fff; background:#2a0000; animation:pulse 1.4s ease-in-out infinite;}
+  .ctl .rec.paused{border-color:var(--gold); color:var(--gold); animation:none;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,75,75,.45);}50%{box-shadow:0 0 0 7px rgba(255,75,75,0);}}
+  .ctl .sm{flex:0 0 46px; min-height:42px; font-size:16px;}
+
+  .meter{margin:2px 10px 0; height:6px; border-radius:4px; background:#222; border:1px solid var(--line); overflow:hidden;}
+  .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--ok),var(--gold),var(--rec)); transition:width .06s linear;}
+
+  .interim{
+    margin:4px 10px 0; min-height:20px; font-size:12.5px; color:var(--gold-deep);
+    font-style:italic; line-height:1.4; white-space:pre-wrap; word-break:break-word;
+  }
+  .interim:empty::before{content:"Press Start and dictate\2026"; opacity:.5;}
+
+  #memo{
+    flex:1 1 auto; margin:6px 10px; padding:11px 12px; resize:none;
+    background:var(--field); color:var(--text); border:1px solid var(--line);
+    border-radius:9px; font:inherit; font-size:var(--memo-fs); line-height:1.5;
+    outline:none; -webkit-user-select:text; user-select:text;
+  }
+  #memo:focus{border-color:var(--gold-deep);}
+  #memo::selection{background:var(--gold); color:#000;}
+
+  .tools{display:flex; gap:5px; padding:4px 10px; flex-wrap:wrap;}
+  .tools button{flex:1 1 60px; min-height:32px; font-size:12px; padding:6px 6px;}
+
+  .status{
+    padding:5px 12px; color:var(--gold-deep); font-size:11.5px; border-top:1px solid var(--line);
+    background:#000; display:flex; gap:12px; white-space:nowrap; overflow:hidden;
+  }
+  .status .grow{flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; color:var(--dim);}
+
+  /* bottom sheets */
+  .backdrop{position:absolute; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .18s; z-index:20;}
+  .backdrop.show{opacity:1; pointer-events:auto;}
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0; z-index:21;
+    background:var(--panel); border-top:2px solid var(--gold-deep);
+    border-radius:14px 14px 0 0; padding:10px 12px 14px;
+    transform:translateY(102%); transition:transform .22s ease; max-height:82%; overflow-y:auto;
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet h3{margin:2px 0 8px; color:var(--gold); font-size:14px; display:flex; align-items:center; gap:8px;}
+  .sheet h3 .x{margin-left:auto; border:none; background:none; color:var(--gold-deep); font-size:20px; min-height:0; padding:0 4px;}
+  .sheet .grp{border:1px solid var(--line); border-radius:9px; padding:8px 10px; margin-bottom:9px;}
+  .sheet .grp > .lbl{color:var(--gold-deep); font-size:10px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
+
+  .field{display:flex; align-items:center; gap:9px; padding:5px 0; font-size:12.5px; color:var(--text);}
+  .field label{flex:1 1 auto;}
+  .field .hint{flex:1 1 100%; font-size:11px; color:var(--gold-deep); line-height:1.4; padding-top:2px;}
+  select,input[type=text]{
+    background:var(--field); color:var(--gold); border:1px solid var(--gold-deep);
+    border-radius:7px; padding:6px 8px; font:inherit; font-size:12.5px; max-width:62%;
+  }
+  input[type=range]{ -webkit-appearance:none; appearance:none; width:150px; height:20px; background:transparent;}
+  input[type=range]::-webkit-slider-runnable-track{height:5px; border-radius:3px; background:#333; border:1px solid var(--line);}
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:17px; height:17px; margin-top:-7px; border-radius:50%; background:var(--gold); border:2px solid #7a6410;}
+  input[type=range]::-moz-range-track{height:5px; border-radius:3px; background:#333; border:1px solid var(--line);}
+  input[type=range]::-moz-range-thumb{width:17px; height:17px; border-radius:50%; background:var(--gold); border:2px solid #7a6410;}
+
+  .sw{position:relative; width:44px; height:24px; flex:0 0 auto;}
+  .sw input{opacity:0; width:100%; height:100%; margin:0;}
+  .sw i{position:absolute; inset:0; border-radius:999px; background:#333; border:1px solid var(--gold-deep); transition:background .15s;}
+  .sw i::after{content:""; position:absolute; width:18px; height:18px; border-radius:50%; background:var(--gold-deep); top:2px; left:2px; transition:transform .15s,background .15s;}
+  .sw input:checked + i{background:#3a2f10;}
+  .sw input:checked + i::after{transform:translateX(20px); background:var(--gold);}
+
+  .rowbtns{display:flex; gap:6px; flex-wrap:wrap;}
+  .rowbtns button{flex:1 1 45%; min-height:34px;}
+
+  .results{font-size:12.5px;}
+  .results .empty{color:var(--gold-deep); padding:8px 2px;}
+  .item{border-bottom:1px solid #1e1a0c; padding:8px 2px;}
+  .item .m{color:var(--dim); line-height:1.4; margin-bottom:5px;}
+  .item .m b{color:var(--gold);}
+  .item .sugg{display:flex; gap:5px; flex-wrap:wrap;}
+  .item .sugg button{flex:0 0 auto; min-height:28px; padding:4px 9px; font-size:12px; border-radius:999px;}
+  .item .sugg button.ghost{border-color:var(--gold-deep); color:var(--gold-deep);}
+
+  .mic-list{font-size:12px; color:var(--dim); line-height:1.5;}
+  .mic-list li{margin-left:4px;}
+
+  .toast{
+    position:absolute; left:50%; bottom:64px; transform:translateX(-50%) translateY(10px);
+    background:#000; border:1px solid var(--gold); color:var(--gold); font-size:12.5px;
+    padding:8px 14px; border-radius:999px; opacity:0; pointer-events:none; transition:all .2s; z-index:40; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="banner">
+    <img src="icon.svg" alt="">
+    <div>
+      <div class="t1">DSR Systems</div>
+      <div class="t2">DSR Dictation</div>
+    </div>
+    <div class="ver">Version 1a</div>
+  </div>
+
+  <div id="notice"></div>
+
+  <div class="ctl">
+    <button id="btnRec" class="rec" type="button">&#9679; Start dictation</button>
+    <button id="btnStop" class="sm" type="button" title="Stop" disabled>&#9632;</button>
+  </div>
+  <div class="meter"><i id="meterBar"></i></div>
+  <div id="interim" class="interim"></div>
+
+  <textarea id="memo" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Your dictated text appears here. You can also type or paste. Everything is saved on this device automatically."></textarea>
+
+  <div class="tools">
+    <button data-sheet="export" type="button">&#128203; Export</button>
+    <button data-sheet="speak"  type="button">&#128266; Read aloud</button>
+    <button data-sheet="spell"  type="button">&#10003; Spelling</button>
+    <button data-sheet="grammar" type="button">&#182; Grammar</button>
+    <button data-sheet="edit"   type="button">&#9998; Edit</button>
+    <button data-sheet="settings" type="button">&#9881; Settings</button>
+  </div>
+
+  <div class="status">
+    <span id="stCount">0 words</span>
+    <span id="stMode">Idle</span>
+    <span class="grow" id="stMsg"></span>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- EXPORT -->
+  <div class="sheet" id="sheet-export" data-name="export">
+    <h3>&#128203; Export <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="rowbtns">
+        <button id="btnCopy" type="button">&#128203; Copy all</button>
+        <button id="btnCopyClear" type="button">Copy &amp; clear</button>
+        <button id="btnShare" type="button">&#128228; Share&hellip;</button>
+        <button id="btnDownload" type="button">&#11015; Download .txt</button>
+        <button id="btnClear" class="sec" type="button">&#128465; Clear all</button>
+        <button id="btnUndo" class="sec" type="button">&#8630; Undo</button>
+      </div>
+    </div>
+    <div class="grp" id="grpInstall" style="display:none;">
+      <div class="lbl">Install</div>
+      <div class="rowbtns"><button id="btnInstall" type="button">&#11015; Install as app</button></div>
+    </div>
+  </div>
+
+  <!-- READ ALOUD -->
+  <div class="sheet" id="sheet-speak" data-name="speak">
+    <h3>&#128266; Read aloud <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="field"><label for="ttsVoice">Voice</label><select id="ttsVoice" style="max-width:66%"></select></div>
+      <div class="field"><label for="ttsRate">Speed</label><input type="range" id="ttsRate" min="0.5" max="2" step="0.05" value="1"><span id="ttsRateV" style="color:var(--gold);width:34px;text-align:right">1.0</span></div>
+      <div class="field"><label for="ttsPitch">Pitch</label><input type="range" id="ttsPitch" min="0" max="2" step="0.05" value="1"><span id="ttsPitchV" style="color:var(--gold);width:34px;text-align:right">1.0</span></div>
+      <div class="field"><label for="ttsVol">Volume</label><input type="range" id="ttsVol" min="0" max="1" step="0.05" value="1"><span id="ttsVolV" style="color:var(--gold);width:34px;text-align:right">1.0</span></div>
+      <div class="field"><label for="ttsFollow">Highlight words while reading</label><span class="sw"><input type="checkbox" id="ttsFollow" checked><i></i></span></div>
+    </div>
+    <div class="grp">
+      <div class="rowbtns">
+        <button id="btnPlay" type="button">&#9654; Play</button>
+        <button id="btnPauseTts" type="button">&#10073;&#10073; Pause</button>
+        <button id="btnStopTts" type="button">&#9632; Stop</button>
+        <button id="btnPreview" class="sec" type="button">&#128264; Test voice</button>
+      </div>
+      <div class="field"><span class="hint" id="ttsHint">Plays the whole note, or just the selected text if you highlight some first.</span></div>
+    </div>
+  </div>
+
+  <!-- SPELLING -->
+  <div class="sheet" id="sheet-spell" data-name="spell">
+    <h3>&#10003; Spelling <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="rowbtns">
+        <button id="btnSpell" type="button">&#128269; Check spelling</button>
+        <button id="btnSpellClear" class="sec" type="button">Clear results</button>
+      </div>
+      <div class="field"><span class="hint">Uses the dictionary chosen in Settings. First run downloads it once (~1&nbsp;MB), then works offline.</span></div>
+    </div>
+    <div class="grp"><div class="lbl">Results</div><div class="results" id="spellOut"><div class="empty">Not checked yet.</div></div></div>
+  </div>
+
+  <!-- GRAMMAR -->
+  <div class="sheet" id="sheet-grammar" data-name="grammar">
+    <h3>&#182; Grammar &amp; style <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="rowbtns">
+        <button id="btnGrammar" type="button">&#128269; Check grammar</button>
+        <button id="btnGrammarFixAll" type="button">&#10003; Fix all</button>
+        <button id="btnGrammarClear" class="sec" type="button">Clear results</button>
+      </div>
+      <div class="field"><label for="gLT">Also use LanguageTool (online)</label><span class="sw"><input type="checkbox" id="gLT"><i></i></span></div>
+      <div class="field"><span class="hint" id="gLTHint">Off = quick offline checks only (spacing, repeats, capitalisation, a/an, common slips). On = also sends the text to api.languagetool.org for a deeper check.</span></div>
+    </div>
+    <div class="grp"><div class="lbl">Results</div><div class="results" id="grammarOut"><div class="empty">Not checked yet.</div></div></div>
+  </div>
+
+  <!-- EDIT -->
+  <div class="sheet" id="sheet-edit" data-name="edit">
+    <h3>&#9998; Edit tools <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="lbl">Reformat the whole note</div>
+      <div class="rowbtns">
+        <button data-fmt="sentence" type="button">Sentence case</button>
+        <button data-fmt="lower" type="button">lower case</button>
+        <button data-fmt="upper" type="button">UPPER CASE</button>
+        <button data-fmt="title" type="button">Title Case</button>
+        <button data-fmt="trim" type="button">Tidy spaces</button>
+        <button data-fmt="blanks" type="button">Remove blank lines</button>
+        <button data-fmt="quotes" type="button">Straighten quotes</button>
+        <button data-fmt="stamp" type="button">Insert date/time</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="sheet" id="sheet-settings" data-name="settings">
+    <h3>&#9881; Settings <button class="x" data-close type="button">&times;</button></h3>
+
+    <div class="grp">
+      <div class="lbl">Dictation</div>
+      <div class="field"><label for="setLang">Accent / language</label>
+        <select id="setLang">
+          <option value="en-AU">English (Australia)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="en-US">English (US)</option>
+          <option value="en-NZ">English (New Zealand)</option>
+          <option value="en-IE">English (Ireland)</option>
+          <option value="en-IN">English (India)</option>
+          <option value="en-CA">English (Canada)</option>
+          <option value="en-ZA">English (South Africa)</option>
+        </select>
+      </div>
+      <div class="field"><label for="setPunct">Spoken punctuation &amp; commands</label><span class="sw"><input type="checkbox" id="setPunct" checked><i></i></span></div>
+      <div class="field"><span class="hint">Say &ldquo;full stop&rdquo;, &ldquo;comma&rdquo;, &ldquo;question mark&rdquo;, &ldquo;new line&rdquo;, &ldquo;new paragraph&rdquo;, &ldquo;new bullet&rdquo;, &ldquo;open/close quote&rdquo;, &ldquo;capital &lt;word&gt;&rdquo;. Say &ldquo;scratch that&rdquo; to undo the last bit, &ldquo;stop dictation&rdquo; to pause.</span></div>
+      <div class="field"><label for="setCap">Auto-capitalise sentences</label><span class="sw"><input type="checkbox" id="setCap" checked><i></i></span></div>
+      <div class="field"><label for="setInterim">Show words as you speak (interim)</label><span class="sw"><input type="checkbox" id="setInterim" checked><i></i></span></div>
+      <div class="field"><label for="setContinuous">Keep listening after pauses</label><span class="sw"><input type="checkbox" id="setContinuous" checked><i></i></span></div>
+      <div class="field"><label for="setProfanity">Filter strong language</label><span class="sw"><input type="checkbox" id="setProfanity"><i></i></span></div>
+      <div class="field"><label for="setWake">Keep screen awake while dictating</label><span class="sw"><input type="checkbox" id="setWake" checked><i></i></span></div>
+      <div class="field"><label for="setInsert">Insert where the cursor is</label><span class="sw"><input type="checkbox" id="setInsert"><i></i></span></div>
+      <div class="field"><span class="hint">Off = always add new text to the end of the note.</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Microphone</div>
+      <div class="field"><span class="hint">Live dictation always uses your device&rsquo;s <b>default</b> microphone &mdash; the browser&rsquo;s speech engine doesn&rsquo;t let an app pick a specific one. For best accuracy: use a headset or hold the phone 15&ndash;20&nbsp;cm away, in a quiet room, and speak at a steady, natural pace. Choose your preferred input as the system default in Windows Sound settings or Android settings.</span></div>
+      <div class="rowbtns"><button id="btnMicTest" type="button">&#127908; Test microphone</button></div>
+      <div class="field"><span class="hint" id="micStat"></span></div>
+      <ul class="mic-list" id="micList"></ul>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Spelling dictionary</div>
+      <div class="field"><label for="setDict">Dictionary</label>
+        <select id="setDict">
+          <option value="en-au">Australian English</option>
+          <option value="en-gb">British English</option>
+          <option value="en-us">American English</option>
+          <option value="en-ca">Canadian English</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Text size</div>
+      <div class="field"><label for="setFont">Note font size</label><input type="range" id="setFont" min="14" max="30" step="1" value="18"><span id="setFontV" style="color:var(--gold);width:34px;text-align:right">18</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">About</div>
+      <div class="field"><span class="hint">DSR Dictation v1a. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar and read-aloud all work offline once installed.</span></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(s){ return document.querySelector(s); };
+var LS = window.localStorage;
+
+/* ---------- settings ---------- */
+var DEF = {
+  lang:"en-AU", punct:true, cap:true, interim:true, continuous:true, profanity:false,
+  wake:true, insertAtCursor:false, dict:"en-au", font:18,
+  ttsVoice:"", ttsRate:1, ttsPitch:1, ttsVol:1, ttsFollow:true, useLT:false
+};
+var S = load();
+function load(){ try{ return Object.assign({}, DEF, JSON.parse(LS.getItem("dsrdict.cfg")||"{}")); }catch(e){ return Object.assign({}, DEF); } }
+function save(){ try{ LS.setItem("dsrdict.cfg", JSON.stringify(S)); }catch(e){} }
+
+var memo = $("#memo");
+try{ memo.value = LS.getItem("dsrdict.text") || ""; }catch(e){}
+var saveTextT;
+function saveText(){ clearTimeout(saveTextT); saveTextT = setTimeout(function(){ try{ LS.setItem("dsrdict.text", memo.value); }catch(e){} }, 300); }
+
+/* ---------- toast + status ---------- */
+var toastT;
+function toast(m){ var t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
+function setMsg(m){ $("#stMsg").textContent = m||""; }
+function updCount(){
+  var txt = memo.value.trim();
+  var w = txt ? txt.split(/\s+/).length : 0;
+  var c = memo.value.length;
+  var secs = Math.round(w / (200*S.ttsRate) * 60);
+  $("#stCount").textContent = w + (w===1?" word":" words") + " · " + c + " chars" + (w? " · ~"+fmtDur(secs)+" aloud":"");
+}
+function fmtDur(s){ if(s<60) return s+"s"; var m=Math.floor(s/60); return m+"m "+(s%60)+"s"; }
+
+/* ---------- undo ---------- */
+var undoStack = [], lastUndoPush = 0;
+function pushUndo(force){
+  var now = Date.now();
+  if(!force && now - lastUndoPush < 1400) return;
+  lastUndoPush = now;
+  undoStack.push(memo.value);
+  if(undoStack.length > 40) undoStack.shift();
+}
+function doUndo(){
+  if(!undoStack.length){ toast("Nothing to undo"); return; }
+  memo.value = undoStack.pop();
+  onMemoChanged(); toast("Undone");
+}
+function onMemoChanged(){ updCount(); saveText(); }
+
+memo.addEventListener("input", onMemoChanged);
+
+/* ---------- sheets ---------- */
+var backdrop = $("#backdrop");
+function openSheet(name){
+  closeSheet();
+  var s = $("#sheet-"+name); if(!s) return;
+  s.classList.add("show"); backdrop.classList.add("show");
+  if(name==="settings") refreshMicList(false);
+}
+function closeSheet(){
+  document.querySelectorAll(".sheet.show").forEach(function(s){ s.classList.remove("show"); });
+  backdrop.classList.remove("show");
+}
+document.querySelectorAll("[data-sheet]").forEach(function(b){ b.addEventListener("click", function(){ openSheet(b.dataset.sheet); }); });
+document.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", closeSheet); });
+backdrop.addEventListener("click", closeSheet);
+
+/* ================================================================
+   SPEECH RECOGNITION
+   ================================================================ */
+var Recog = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+var rec = null, mode = "idle", manualStop = false, lastStart = 0, restartT = null;
+var lastInsert = "", lastInsertRange = null;
+
+function notice(html){ var n=$("#notice"); if(!html){ n.classList.remove("show"); return; } n.innerHTML = html; n.classList.add("show"); }
+
+if(!Recog){
+  notice("<b>Live dictation isn&rsquo;t available in this browser.</b> Open DSR Dictation in Chrome on the desktop, or install it from Chrome on Android. You can still type, check spelling &amp; grammar, and use Read aloud here.");
+  $("#btnRec").disabled = true;
+} else if(!window.isSecureContext){
+  notice("<b>Microphone blocked:</b> this page must be served over HTTPS for dictation to work.");
+}
+
+function buildRec(){
+  rec = new Recog();
+  rec.continuous = true;
+  rec.interimResults = S.interim;
+  rec.maxAlternatives = 1;
+  rec.lang = S.lang;
+  rec.onstart = function(){ lastStart = Date.now(); };
+  rec.onaudiostart = function(){ setMsg("Listening…"); };
+  rec.onresult = onResult;
+  rec.onerror = onError;
+  rec.onend = function(){
+    if(mode === "listening" && !manualStop){
+      var gap = Date.now() - lastStart;
+      var wait = gap < 700 ? 900 : 120;
+      clearTimeout(restartT);
+      restartT = setTimeout(function(){ if(mode==="listening"){ try{ rec.start(); }catch(e){} } }, wait);
+    }
+  };
+}
+
+function onError(e){
+  var err = e.error || "";
+  if(err === "not-allowed" || err === "service-not-allowed"){
+    setModeIdle();
+    notice("<b>Microphone permission denied.</b> Allow the microphone for this site in your browser settings, then press Start again.");
+  } else if(err === "audio-capture"){
+    setModeIdle();
+    toast("No microphone found");
+  } else if(err === "no-speech"){
+    setMsg("No speech heard – still listening…");
+  } else if(err === "network"){
+    setMsg("Speech network hiccup – retrying…");
+  } else if(err === "aborted"){
+    /* normal on stop */
+  } else {
+    setMsg("Speech error: " + err);
+  }
+}
+
+function startRec(){
+  if(!Recog) return;
+  notice("");
+  if(!rec) buildRec();
+  rec.interimResults = S.interim;
+  rec.lang = S.lang;
+  manualStop = false;
+  mode = "listening";
+  try{ rec.start(); }catch(e){ /* already running */ }
+  reflectMode();
+  startMeter();
+  if(S.wake) reqWake();
+  if(speechSynthesis.speaking){ speechSynthesis.cancel(); }
+}
+function pauseRec(){
+  manualStop = true; mode = "paused";
+  clearTimeout(restartT);
+  try{ rec && rec.stop(); }catch(e){}
+  reflectMode(); stopMeter(); relWake();
+  $("#interim").textContent = "";
+}
+function setModeIdle(){
+  manualStop = true; mode = "idle";
+  clearTimeout(restartT);
+  try{ rec && rec.stop(); }catch(e){}
+  reflectMode(); stopMeter(); relWake();
+  $("#interim").textContent = ""; setMsg("");
+}
+function reflectMode(){
+  var b = $("#btnRec");
+  b.classList.remove("live","paused");
+  if(mode === "listening"){ b.classList.add("live"); b.innerHTML = "&#10073;&#10073; Pause"; $("#btnStop").disabled = false; $("#stMode").textContent = "Listening"; }
+  else if(mode === "paused"){ b.classList.add("paused"); b.innerHTML = "&#9679; Resume"; $("#btnStop").disabled = false; $("#stMode").textContent = "Paused"; }
+  else { b.innerHTML = "&#9679; Start dictation"; $("#btnStop").disabled = true; $("#stMode").textContent = "Idle"; }
+}
+
+$("#btnRec").addEventListener("click", function(){
+  if(mode === "listening") pauseRec();
+  else startRec();
+});
+$("#btnStop").addEventListener("click", setModeIdle);
+
+/* ---------- result handling ---------- */
+function onResult(e){
+  var interim = "";
+  for(var i = e.resultIndex; i < e.results.length; i++){
+    var r = e.results[i];
+    if(r.isFinal) commit(r[0].transcript);
+    else interim += r[0].transcript;
+  }
+  $("#interim").textContent = S.interim ? interim : "";
+}
+
+var CMD = {
+  "full stop":".", "period":".", "point":".", "comma":",", "question mark":"?",
+  "exclamation mark":"!", "exclamation point":"!", "colon":":", "semicolon":";", "semi colon":";",
+  "new line":"\n", "next line":"\n", "line break":"\n",
+  "new paragraph":"\n\n", "next paragraph":"\n\n",
+  "open bracket":"(", "close bracket":")", "open parenthesis":"(", "close parenthesis":")",
+  "open quote":"“", "close quote":"”", "quote":"\"", "apostrophe":"’",
+  "hyphen":"-", "dash":" – ", "ellipsis":"…", "dot dot dot":"…",
+  "new bullet":"\n• ", "bullet point":"\n• ", "ampersand":"&", "percent sign":"%",
+  "smiley face":"🙂", "sad face":"🙁", "winky face":"😉"
+};
+var HUG_LEFT = {".":1,",":1,"?":1,"!":1,":":1,";":1,")":1,"”":1,"…":1,"%":1};
+
+function cleanKey(w){ return w.toLowerCase().replace(/[^a-z' ]/g,""); }
+
+function commit(raw){
+  raw = (raw||"").replace(/\s+/g," ").trim();
+  if(!raw) return;
+
+  var whole = raw.toLowerCase().replace(/[^a-z ]/g,"").trim();
+  if(whole === "scratch that" || whole === "delete that" || whole === "undo that"){
+    scratchLast(); return;
+  }
+  if(whole === "stop dictation" || whole === "stop listening" || whole === "pause dictation" || whole === "pause listening"){
+    pauseRec(); toast("Dictation paused"); return;
+  }
+  if(whole === "new paragraph"){ insertText("\n\n"); return; }
+
+  var words = raw.split(" ");
+  var toks = [];
+  for(var i = 0; i < words.length; i++){
+    var w = words[i];
+    var k1 = cleanKey(w);
+    var k2 = (i+1 < words.length) ? (k1 + " " + cleanKey(words[i+1])) : null;
+    var k3 = (i+2 < words.length) ? (k2 + " " + cleanKey(words[i+2])) : null;
+
+    if(S.punct && k3 && CMD[k3] != null){ pushCmd(toks, CMD[k3]); i += 2; continue; }
+    if(S.punct && k2 && CMD[k2] != null){ pushCmd(toks, CMD[k2]); i += 1; continue; }
+    if(S.punct && CMD[k1] != null){ pushCmd(toks, CMD[k1]); continue; }
+    if(S.punct && (k1 === "capital" || k1 === "capitalise" || k1 === "capitalize") && words[i+1]){
+      i++; toks.push({t:"text", v: capFirst(words[i])}); continue;
+    }
+    if(S.punct && k1 === "all" && cleanKey(words[i+1]||"") === "caps" && words[i+2]){
+      i += 2; toks.push({t:"text", v: words[i].toUpperCase()}); continue;
+    }
+    toks.push({t:"text", v:w});
+  }
+
+  var chunk = buildChunk(toks);
+  if(!chunk) return;
+  if(S.cap) chunk = applyCaps(chunk, tailOf(currentText()));
+  var sep = leadSep(currentText(), chunk);
+  insertText(sep + chunk);
+}
+
+function pushCmd(toks, v){
+  if(v.charAt(0) === "\n") toks.push({t:"nl", v:v});
+  else if(v.length === 1 && (HUG_LEFT[v] || v === "(" || v === "“")) toks.push({t:"punct", v:v});
+  else if(v === "”") toks.push({t:"punct", v:v});
+  else toks.push({t:"text", v:v});
+}
+function buildChunk(toks){
+  var s = "";
+  for(var i = 0; i < toks.length; i++){
+    var tk = toks[i];
+    if(tk.t === "nl"){ s = s.replace(/[ \t]+$/,""); s += tk.v; continue; }
+    if(tk.t === "punct"){
+      if(HUG_LEFT[tk.v]){ s = s.replace(/[ \t]+$/,""); s += tk.v; }
+      else { if(s && !/[\s(“]$/.test(s)) s += " "; s += tk.v; }
+      continue;
+    }
+    if(s && !/[\s(“]$/.test(s)) s += " ";
+    s += tk.v;
+  }
+  return s;
+}
+function tailOf(t){ return t.slice(-1); }
+function currentText(){
+  if(S.insertAtCursor && document.activeElement === memo)
+    return memo.value.slice(0, memo.selectionStart);
+  return memo.value;
+}
+function leadSep(existing, chunk){
+  if(!existing) return "";
+  var tl = existing.slice(-1);
+  if(/\s/.test(tl) || tl === "(" || tl === "“") return "";
+  if(/^[.,?!:;)”…%]/.test(chunk) || chunk.charAt(0) === "\n") return "";
+  return " ";
+}
+function capFirst(w){ return w.charAt(0).toUpperCase() + w.slice(1); }
+function applyCaps(chunk, prevTail){
+  var atSentence = !prevTail || /[.!?…]["'”)]?\s*$/.test(currentText()) || /\n\s*$/.test(currentText()) || currentText()==="";
+  if(atSentence) chunk = chunk.replace(/^(\s*[\(“"']?\s*)([a-z])/, function(_,p,c){ return p + c.toUpperCase(); });
+  chunk = chunk.replace(/([.!?…]\s+|\n\s*(?:• )?)([a-z])/g, function(_,p,c){ return p + c.toUpperCase(); });
+  chunk = chunk.replace(/\bi\b/g, "I").replace(/\bi'/g, "I'");
+  return chunk;
+}
+
+function insertText(str){
+  pushUndo(false);
+  if(S.insertAtCursor && document.activeElement === memo){
+    var a = memo.selectionStart, b = memo.selectionEnd;
+    memo.value = memo.value.slice(0,a) + str + memo.value.slice(b);
+    var p = a + str.length;
+    try{ memo.setSelectionRange(p,p); }catch(e){}
+    lastInsert = str; lastInsertRange = [a, p];
+  } else {
+    memo.value += str;
+    lastInsert = str; lastInsertRange = null;
+    memo.scrollTop = memo.scrollHeight;
+  }
+  onMemoChanged();
+}
+function scratchLast(){
+  if(!lastInsert) return;
+  if(lastInsertRange){
+    var a = lastInsertRange[0], b = lastInsertRange[1];
+    if(memo.value.slice(a,b) === lastInsert){
+      memo.value = memo.value.slice(0,a) + memo.value.slice(b);
+      try{ memo.setSelectionRange(a,a); }catch(e){}
+    }
+  } else if(memo.value.slice(-lastInsert.length) === lastInsert){
+    memo.value = memo.value.slice(0, -lastInsert.length);
+  }
+  lastInsert = ""; lastInsertRange = null;
+  onMemoChanged(); toast("Removed last bit");
+}
+
+/* ================================================================
+   MIC LEVEL METER + DEVICE LIST
+   ================================================================ */
+var meterStream = null, meterCtx = null, meterRAF = null;
+function startMeter(){
+  if(meterCtx || !navigator.mediaDevices) return;
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    meterStream = stream;
+    meterCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var src = meterCtx.createMediaStreamSource(stream);
+    var an = meterCtx.createAnalyser(); an.fftSize = 512;
+    src.connect(an);
+    var buf = new Uint8Array(an.fftSize);
+    var bar = $("#meterBar");
+    (function tick(){
+      an.getByteTimeDomainData(buf);
+      var sum = 0;
+      for(var i=0;i<buf.length;i++){ var v=(buf[i]-128)/128; sum += v*v; }
+      var rms = Math.sqrt(sum/buf.length);
+      var pct = Math.min(100, Math.round(rms * 260));
+      bar.style.width = pct + "%";
+      meterRAF = requestAnimationFrame(tick);
+    })();
+  }).catch(function(){ /* permission handled by recognition */ });
+}
+function stopMeter(){
+  if(meterRAF) cancelAnimationFrame(meterRAF); meterRAF = null;
+  if(meterStream){ meterStream.getTracks().forEach(function(t){ t.stop(); }); meterStream = null; }
+  if(meterCtx){ try{ meterCtx.close(); }catch(e){} meterCtx = null; }
+  $("#meterBar").style.width = "0%";
+}
+function refreshMicList(prompt){
+  var ul = $("#micList"), stat = $("#micStat");
+  if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices){ stat.textContent = "This browser can't list microphones."; return; }
+  var go = prompt
+    ? navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){ s.getTracks().forEach(function(t){ t.stop(); }); })
+    : Promise.resolve();
+  go.then(function(){ return navigator.mediaDevices.enumerateDevices(); }).then(function(list){
+    var mics = list.filter(function(d){ return d.kind === "audioinput"; });
+    ul.innerHTML = "";
+    if(!mics.length){ ul.innerHTML = "<li>(none detected)</li>"; return; }
+    mics.forEach(function(d){
+      var li = document.createElement("li");
+      li.textContent = d.label || "Microphone (allow access to see its name)";
+      ul.appendChild(li);
+    });
+  }).catch(function(){ stat.textContent = "Microphone access was blocked."; });
+}
+$("#btnMicTest").addEventListener("click", function(){
+  var stat = $("#micStat");
+  stat.textContent = "Testing… speak now.";
+  refreshMicList(true);
+  startMeter();
+  var t0 = Date.now(), peak = 0;
+  var iv = setInterval(function(){
+    peak = Math.max(peak, parseInt($("#meterBar").style.width) || 0);
+    if(Date.now() - t0 > 3500){
+      clearInterval(iv);
+      if(mode !== "listening") stopMeter();
+      stat.textContent = peak > 8 ? ("Microphone works – peak level " + peak + "%.") : "No sound detected – check the mic is connected and allowed.";
+    }
+  }, 120);
+});
+
+/* ================================================================
+   WAKE LOCK
+   ================================================================ */
+var wake = null;
+function reqWake(){
+  if(!navigator.wakeLock) return;
+  navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){});
+}
+function relWake(){ if(wake){ wake.release().catch(function(){}); wake = null; } }
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible" && (mode === "listening") && S.wake) reqWake();
+});
+
+/* ================================================================
+   TEXT TO SPEECH
+   ================================================================ */
+var voices = [], ttsQueue = [], ttsIdx = 0, ttsBase = 0, ttsPaused = false, ttsWatch = null;
+function loadVoices(){
+  voices = speechSynthesis.getVoices() || [];
+  var sel = $("#ttsVoice");
+  sel.innerHTML = "";
+  if(!voices.length){ sel.innerHTML = "<option>(loading voices…)</option>"; return; }
+  var groups = {};
+  voices.forEach(function(v, idx){
+    var g = (v.lang || "??");
+    (groups[g] = groups[g] || []).push({v:v, i:idx});
+  });
+  Object.keys(groups).sort(function(a,b){
+    var ae = a.indexOf("en")===0, be = b.indexOf("en")===0;
+    if(ae !== be) return ae ? -1 : 1;
+    return a.localeCompare(b);
+  }).forEach(function(g){
+    var og = document.createElement("optgroup"); og.label = g;
+    groups[g].forEach(function(o){
+      var opt = document.createElement("option");
+      opt.value = o.i; opt.textContent = o.v.name + (o.v.localService ? "" : " ☁");
+      og.appendChild(opt);
+    });
+    $("#ttsVoice").appendChild(og);
+  });
+  if(S.ttsVoice){
+    var m = voices.findIndex(function(v){ return v.name === S.ttsVoice; });
+    if(m >= 0) sel.value = m;
+  } else {
+    var pref = voices.findIndex(function(v){ return /en-AU/i.test(v.lang); });
+    if(pref < 0) pref = voices.findIndex(function(v){ return /^en/i.test(v.lang); });
+    if(pref >= 0) sel.value = pref;
+  }
+  $("#ttsHint").textContent = voices.length + " voices available (☁ = online voice). Plays the whole note, or the selected text if you highlight some.";
+}
+if("speechSynthesis" in window){
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+} else {
+  $("#ttsHint").textContent = "Text-to-speech isn't supported in this browser.";
+}
+
+function ttsText(){
+  var sel = memo.value.substring(memo.selectionStart, memo.selectionEnd);
+  return { text: sel && sel.trim() ? sel : memo.value, offset: sel && sel.trim() ? memo.selectionStart : 0 };
+}
+function splitSentences(t){
+  var parts = t.match(/[^.!?\n]+(?:[.!?]+|\n+|$)/g) || [t];
+  var out = [], cur = "", start = 0, pos = 0;
+  parts.forEach(function(p){
+    if((cur + p).length > 240 && cur){ out.push({s:cur, at:start}); cur = ""; start = pos; }
+    if(!cur) start = pos;
+    cur += p; pos += p.length;
+  });
+  if(cur.trim()) out.push({s:cur, at:start});
+  return out;
+}
+function play(){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  var info = ttsText();
+  if(!info.text.trim()){ toast("Nothing to read"); return; }
+  if(mode === "listening") pauseRec();
+  var segs = splitSentences(info.text);
+  ttsQueue = segs.map(function(seg){ return { s: seg.s, at: info.offset + seg.at }; });
+  ttsIdx = 0; ttsPaused = false;
+  speakNext();
+  clearInterval(ttsWatch);
+  ttsWatch = setInterval(function(){
+    if(speechSynthesis.speaking && !speechSynthesis.paused && !ttsPaused) speechSynthesis.resume();
+  }, 9000);
+}
+function speakNext(){
+  if(ttsIdx >= ttsQueue.length){ endTts(); return; }
+  var item = ttsQueue[ttsIdx];
+  var u = new SpeechSynthesisUtterance(item.s);
+  var vi = parseInt($("#ttsVoice").value);
+  if(voices[vi]){ u.voice = voices[vi]; u.lang = voices[vi].lang; }
+  u.rate = S.ttsRate; u.pitch = S.ttsPitch; u.volume = S.ttsVol;
+  u.onboundary = function(ev){
+    if(!S.ttsFollow || ev.name === "sentence") return;
+    var ci = item.at + (ev.charIndex || 0);
+    var full = memo.value;
+    var s = ci; while(s > 0 && /\S/.test(full[s-1])) s--;
+    var e = ci; while(e < full.length && /\S/.test(full[e])) e++;
+    if(e > s){ try{ memo.setSelectionRange(s, e); }catch(x){} }
+  };
+  u.onend = function(){ if(!ttsPaused){ ttsIdx++; speakNext(); } };
+  u.onerror = function(){ ttsIdx++; speakNext(); };
+  $("#stMode").textContent = "Reading";
+  speechSynthesis.speak(u);
+}
+function endTts(){
+  clearInterval(ttsWatch); ttsWatch = null; ttsPaused = false;
+  $("#stMode").textContent = mode === "listening" ? "Listening" : (mode === "paused" ? "Paused" : "Idle");
+}
+$("#btnPlay").addEventListener("click", play);
+$("#btnPauseTts").addEventListener("click", function(){
+  if(!("speechSynthesis" in window)) return;
+  if(speechSynthesis.speaking && !speechSynthesis.paused){ speechSynthesis.pause(); ttsPaused = true; $("#btnPauseTts").innerHTML = "&#9654; Resume"; }
+  else if(speechSynthesis.paused){ speechSynthesis.resume(); ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; }
+});
+$("#btnStopTts").addEventListener("click", function(){
+  if("speechSynthesis" in window) speechSynthesis.cancel();
+  ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; endTts();
+});
+$("#btnPreview").addEventListener("click", function(){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance("This is a preview of the selected voice for DSR Dictation.");
+  var vi = parseInt($("#ttsVoice").value);
+  if(voices[vi]){ u.voice = voices[vi]; u.lang = voices[vi].lang; }
+  u.rate = S.ttsRate; u.pitch = S.ttsPitch; u.volume = S.ttsVol;
+  speechSynthesis.speak(u);
+});
+
+/* ================================================================
+   SPELL CHECK  (nspell + Hunspell dictionary from jsDelivr)
+   ================================================================ */
+var speller = null, spellerFor = "", spellLoading = null;
+var DICT_URLS = {
+  "en-au": ["dictionary-en-au", "dictionary-en-gb"],
+  "en-gb": ["dictionary-en-gb"],
+  "en-us": ["dictionary-en", "dictionary-en-us"],
+  "en-ca": ["dictionary-en-ca", "dictionary-en-gb"]
+};
+function loadSpeller(){
+  if(speller && spellerFor === S.dict) return Promise.resolve(speller);
+  if(spellLoading) return spellLoading;
+  var pkgs = DICT_URLS[S.dict] || DICT_URLS["en-gb"];
+  setMsg("Loading " + S.dict + " dictionary…");
+  spellLoading = (function(){
+    function tryPkg(idx){
+      if(idx >= pkgs.length) return Promise.reject(new Error("no dictionary"));
+      var base = "https://cdn.jsdelivr.net/npm/" + pkgs[idx] + "/";
+      return Promise.all([
+        fetch(base + "index.aff").then(function(r){ if(!r.ok) throw 0; return r.text(); }),
+        fetch(base + "index.dic").then(function(r){ if(!r.ok) throw 0; return r.text(); })
+      ]).catch(function(){ return tryPkg(idx + 1); });
+    }
+    return Promise.all([
+      tryPkg(0),
+      import("https://cdn.jsdelivr.net/npm/nspell@2.1.5/+esm").then(function(m){ return m.default || m; })
+    ]).then(function(res){
+      var pair = res[0], NSpell = res[1];
+      speller = NSpell(pair[0], pair[1]);
+      spellerFor = S.dict; spellLoading = null; setMsg("");
+      return speller;
+    }).catch(function(e){
+      spellLoading = null; setMsg("");
+      throw e;
+    });
+  })();
+  return spellLoading;
+}
+var spellIgnore = {};
+function checkSpelling(){
+  var out = $("#spellOut");
+  out.innerHTML = "<div class='empty'>Checking…</div>";
+  loadSpeller().then(function(sp){
+    var re = /[A-Za-z][A-Za-z'’]*/g, m, bad = [], seen = {};
+    while((m = re.exec(memo.value))){
+      var w = m[0];
+      if(w.length < 2) continue;
+      if(/^[A-Z0-9]+$/.test(w)) continue;               // acronyms
+      if(spellIgnore[w.toLowerCase()]) continue;
+      var norm = w.replace(/’/g, "'");
+      if(sp.correct(norm)) continue;
+      var key = w.toLowerCase();
+      if(seen[key]) { seen[key].count++; continue; }
+      var rec = { word: w, count: 1, sugg: sp.suggest(norm).slice(0, 6) };
+      seen[key] = rec; bad.push(rec);
+    }
+    renderSpell(bad);
+  }).catch(function(){
+    out.innerHTML = "<div class='empty'>Couldn't load the dictionary. Check your connection and try again, or pick a different dictionary in Settings.</div>";
+  });
+}
+function renderSpell(bad){
+  var out = $("#spellOut");
+  if(!bad.length){ out.innerHTML = "<div class='empty'>No spelling issues found. ✅</div>"; return; }
+  out.innerHTML = "";
+  bad.forEach(function(rec){
+    var d = document.createElement("div"); d.className = "item";
+    var mm = document.createElement("div"); mm.className = "m";
+    mm.innerHTML = "<b>" + esc(rec.word) + "</b>" + (rec.count > 1 ? " ×" + rec.count : "") + " – not in dictionary";
+    d.appendChild(mm);
+    var sg = document.createElement("div"); sg.className = "sugg";
+    rec.sugg.forEach(function(s){
+      var b = document.createElement("button");
+      b.textContent = s;
+      b.addEventListener("click", function(){ replaceWord(rec.word, s); checkSpelling(); });
+      sg.appendChild(b);
+    });
+    var ign = document.createElement("button"); ign.className = "ghost"; ign.textContent = "Ignore";
+    ign.addEventListener("click", function(){ spellIgnore[rec.word.toLowerCase()] = 1; checkSpelling(); });
+    sg.appendChild(ign);
+    var add = document.createElement("button"); add.className = "ghost"; add.textContent = "Add to dictionary";
+    add.addEventListener("click", function(){ if(speller){ speller.add(rec.word.replace(/’/g,"'")); } checkSpelling(); });
+    sg.appendChild(add);
+    d.appendChild(sg);
+    out.appendChild(d);
+  });
+}
+function replaceWord(from, to){
+  pushUndo(true);
+  var re = new RegExp("(^|[^A-Za-z'])(" + from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![A-Za-z'])", "g");
+  memo.value = memo.value.replace(re, function(_, pre){
+    var rep = to;
+    if(/^[A-Z]/.test(from)) rep = to.charAt(0).toUpperCase() + to.slice(1);
+    return pre + rep;
+  });
+  onMemoChanged();
+}
+$("#btnSpell").addEventListener("click", checkSpelling);
+$("#btnSpellClear").addEventListener("click", function(){ $("#spellOut").innerHTML = "<div class='empty'>Not checked yet.</div>"; spellIgnore = {}; });
+
+/* ================================================================
+   GRAMMAR / STYLE
+   ================================================================ */
+function offlineGrammar(t){
+  var f = [], m, re;
+  re = /  +/g;                       while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Extra space", rep:" "});
+  re = /[ \t]+([,.;:!?])/g;          while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Space before “"+m[1]+"”", rep:m[1]});
+  re = /([,.;:!?])([A-Za-z])/g;      while((m = re.exec(t))){ if(!/\d/.test(m[2]) && !(m[1]==="." && /^[a-z]$/.test(m[2]) && /\b[a-z]\.[a-z]\./i.test(t.substr(Math.max(0,m.index-2),6)))) f.push({i:m.index, len:m[0].length, msg:"Missing space after “"+m[1]+"”", rep:m[1]+" "+m[2]}); }
+  re = /\b(\w+)\s+\1\b/gi;           while((m = re.exec(t))){ if(m[1].length>1 && !/^(that|had|the)$/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"Repeated word “"+m[1]+"”", rep:m[1]}); }
+  re = /\bi\b/g;                     while((m = re.exec(t))) f.push({i:m.index, len:1, msg:"“i” should be capital “I”", rep:"I"});
+  re = /\b(could|should|would|must|might)\s+of\b/gi; while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“"+m[1]+" of” → “"+m[1]+" have”", rep:m[1]+" have"});
+  re = /\balot\b/gi;                 while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“alot” → “a lot”", rep:"a lot"});
+  re = /\bteh\b/gi;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“teh” → “the”", rep:"the"});
+  re = /\ba\s+([aeiouAEIOU]\w+)/g;   while((m = re.exec(t))){ if(!/^(uni|use|user|one|euro|ubiqu)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“a "+m[1]+"” → “an "+m[1]+"”", rep:"an "+m[1]}); }
+  re = /\ban\s+([bcdfghjklmnpqrstvwxyz]\w+)/gi; while((m = re.exec(t))){ if(!/^(hour|honest|honou?r|heir)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“an "+m[1]+"” → “a "+m[1]+"”", rep:"a "+m[1]}); }
+  re = /([.!?]\s+|\n\s*)([a-z])/g;   while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Sentence should start with a capital", rep:m[1] + m[2].toUpperCase()});
+  re = /[!?]{3,}/g;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Excessive punctuation", rep:m[0].charAt(0)});
+  re = /[ \t]+$/gm;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Trailing space", rep:""});
+  var first = t.replace(/^\s+/, "");
+  if(first && /[a-z]/.test(first[0])) f.push({i: t.length - first.length, len:1, msg:"First letter should be a capital", rep:first[0].toUpperCase()});
+  var tr = t.replace(/\s+$/, "");
+  if(tr && !/[.!?)"'”…]$/.test(tr)) f.push({i: tr.length - 1, len:1, msg:"The text doesn't end with a full stop", rep: tr.slice(-1) + "."});
+  return f;
+}
+function ltGrammar(t){
+  var body = new URLSearchParams();
+  body.set("text", t); body.set("language", S.lang); body.set("enabledOnly", "false");
+  return fetch("https://api.languagetool.org/v2/check", {
+    method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body
+  }).then(function(r){ return r.json(); }).then(function(j){
+    return (j.matches || []).map(function(mm){
+      return { i: mm.offset, len: mm.length, msg: mm.message, rep: (mm.replacements && mm.replacements[0]) ? mm.replacements[0].value : null, lt:true };
+    });
+  });
+}
+var grammarFindings = [];
+function checkGrammar(){
+  var out = $("#grammarOut");
+  out.innerHTML = "<div class='empty'>Checking…</div>";
+  var t = memo.value;
+  var jobs = [Promise.resolve(offlineGrammar(t))];
+  if(S.useLT && t.trim()) jobs.push(ltGrammar(t).catch(function(){ toast("LanguageTool unreachable"); return []; }));
+  Promise.all(jobs).then(function(parts){
+    var all = [].concat.apply([], parts);
+    var keyed = {};
+    all.forEach(function(f){ var k = f.i + ":" + f.len + ":" + f.msg; if(!keyed[k]) keyed[k] = f; });
+    grammarFindings = Object.keys(keyed).map(function(k){ return keyed[k]; }).sort(function(a,b){ return a.i - b.i; });
+    renderGrammar();
+  });
+}
+function renderGrammar(){
+  var out = $("#grammarOut");
+  if(!grammarFindings.length){ out.innerHTML = "<div class='empty'>No issues found. ✅</div>"; return; }
+  out.innerHTML = "";
+  grammarFindings.forEach(function(f, idx){
+    var d = document.createElement("div"); d.className = "item";
+    var snip = esc(memo.value.substr(Math.max(0, f.i - 18), 18) + "〈" + memo.value.substr(f.i, f.len) + "〉" + memo.value.substr(f.i + f.len, 18)).replace(/\n/g, "↵");
+    var mm = document.createElement("div"); mm.className = "m";
+    mm.innerHTML = (f.lt ? "" : "") + esc(f.msg) + "<br><span style='color:var(--gold-deep)'>…" + snip + "…</span>";
+    d.appendChild(mm);
+    var sg = document.createElement("div"); sg.className = "sugg";
+    if(f.rep != null){
+      var b = document.createElement("button"); b.textContent = "Fix → " + (f.rep === "" ? "(remove)" : JSON.stringify(f.rep).slice(1, -1));
+      b.addEventListener("click", function(){ applyGrammar(f); });
+      sg.appendChild(b);
+    }
+    var ig = document.createElement("button"); ig.className = "ghost"; ig.textContent = "Dismiss";
+    ig.addEventListener("click", function(){ grammarFindings.splice(grammarFindings.indexOf(f), 1); renderGrammar(); });
+    sg.appendChild(ig);
+    d.appendChild(sg);
+    out.appendChild(d);
+  });
+}
+function applyGrammar(f){
+  pushUndo(true);
+  memo.value = memo.value.slice(0, f.i) + f.rep + memo.value.slice(f.i + f.len);
+  onMemoChanged();
+  grammarFindings.splice(grammarFindings.indexOf(f), 1);
+  checkGrammar();
+}
+function fixAllGrammar(){
+  if(!grammarFindings.length){ toast("Nothing to fix"); return; }
+  pushUndo(true);
+  grammarFindings.slice().sort(function(a,b){ return b.i - a.i; }).forEach(function(f){
+    if(f.rep == null) return;
+    memo.value = memo.value.slice(0, f.i) + f.rep + memo.value.slice(f.i + f.len);
+  });
+  onMemoChanged();
+  checkGrammar();
+  toast("Applied fixes");
+}
+$("#btnGrammar").addEventListener("click", checkGrammar);
+$("#btnGrammarFixAll").addEventListener("click", fixAllGrammar);
+$("#btnGrammarClear").addEventListener("click", function(){ grammarFindings = []; $("#grammarOut").innerHTML = "<div class='empty'>Not checked yet.</div>"; });
+
+/* ================================================================
+   EXPORT / CLIPBOARD
+   ================================================================ */
+function copyText(t){
+  if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
+  return new Promise(function(res, rej){
+    try{ memo.focus(); memo.select(); document.execCommand("copy"); memo.setSelectionRange(memo.value.length, memo.value.length); res(); }
+    catch(e){ rej(e); }
+  });
+}
+$("#btnCopy").addEventListener("click", function(){
+  if(!memo.value){ toast("Nothing to copy"); return; }
+  copyText(memo.value).then(function(){ toast("Copied to clipboard"); }).catch(function(){ toast("Copy failed"); });
+});
+$("#btnCopyClear").addEventListener("click", function(){
+  if(!memo.value){ toast("Nothing to copy"); return; }
+  copyText(memo.value).then(function(){ pushUndo(true); memo.value = ""; onMemoChanged(); toast("Copied – note cleared"); });
+});
+$("#btnShare").addEventListener("click", function(){
+  if(!memo.value){ toast("Nothing to share"); return; }
+  if(navigator.share) navigator.share({ text: memo.value }).catch(function(){});
+  else { copyText(memo.value).then(function(){ toast("Sharing not supported – copied instead"); }); }
+});
+$("#btnDownload").addEventListener("click", function(){
+  var blob = new Blob([memo.value], { type: "text/plain" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "dictation-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".txt";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+});
+$("#btnClear").addEventListener("click", function(){
+  if(!memo.value){ return; }
+  if(confirm("Clear the whole note? (Undo can bring it back this session.)")){ pushUndo(true); memo.value = ""; onMemoChanged(); }
+});
+$("#btnUndo").addEventListener("click", doUndo);
+
+/* ================================================================
+   EDIT TOOLS
+   ================================================================ */
+function titleCase(s){
+  var small = /^(a|an|and|as|at|but|by|for|if|in|of|on|or|the|to|vs?\.?|via)$/i;
+  return s.replace(/\w[^\s]*/g, function(w, i){
+    if(i !== 0 && small.test(w)) return w.toLowerCase();
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+}
+function sentenceCase(s){
+  s = s.toLowerCase();
+  return s.replace(/(^\s*|[.!?]\s+|\n\s*)([a-z])/g, function(_, p, c){ return p + c.toUpperCase(); }).replace(/\bi\b/g, "I");
+}
+document.querySelectorAll("[data-fmt]").forEach(function(b){
+  b.addEventListener("click", function(){
+    pushUndo(true);
+    var v = memo.value, f = b.dataset.fmt;
+    if(f === "sentence") v = sentenceCase(v);
+    else if(f === "lower") v = v.toLowerCase();
+    else if(f === "upper") v = v.toUpperCase();
+    else if(f === "title") v = titleCase(v);
+    else if(f === "trim") v = v.replace(/[ \t]+/g, " ").replace(/ +([,.;:!?])/g, "$1").replace(/[ \t]+$/gm, "").replace(/([,.;:!?])(?=[A-Za-z])/g, "$1 ");
+    else if(f === "blanks") v = v.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
+    else if(f === "quotes") v = v.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+    else if(f === "stamp"){ var d = new Date().toLocaleString(); v = v + (v && !/\n$/.test(v) ? "\n" : "") + d + "\n"; }
+    memo.value = v; onMemoChanged(); toast("Done");
+  });
+});
+
+/* ================================================================
+   SETTINGS WIRING
+   ================================================================ */
+function bindToggle(id, key, after){
+  var el = $(id); el.checked = !!S[key];
+  el.addEventListener("change", function(){ S[key] = el.checked; save(); if(after) after(); });
+}
+function bindSelect(id, key, after){
+  var el = $(id); el.value = S[key];
+  el.addEventListener("change", function(){ S[key] = el.value; save(); if(after) after(); });
+}
+bindSelect("#setLang", "lang", function(){ if(rec){ rec.lang = S.lang; } if(mode === "listening"){ pauseRec(); startRec(); } });
+bindToggle("#setPunct", "punct");
+bindToggle("#setCap", "cap");
+bindToggle("#setInterim", "interim", function(){ if(rec) rec.interimResults = S.interim; if(!S.interim) $("#interim").textContent = ""; });
+bindToggle("#setContinuous", "continuous");
+bindToggle("#setProfanity", "profanity", function(){ if(rec && "profanityFilter" in rec) rec.profanityFilter = S.profanity; });
+bindToggle("#setWake", "wake");
+bindToggle("#setInsert", "insertAtCursor");
+bindSelect("#setDict", "dict", function(){ speller = null; spellerFor = ""; });
+var setFont = $("#setFont"); setFont.value = S.font; applyFont();
+setFont.addEventListener("input", function(){ S.font = +setFont.value; applyFont(); save(); });
+function applyFont(){ document.documentElement.style.setProperty("--memo-fs", S.font + "px"); $("#setFontV").textContent = S.font; }
+
+bindToggle("#gLT", "useLT");
+$("#ttsFollow").checked = S.ttsFollow;
+$("#ttsFollow").addEventListener("change", function(){ S.ttsFollow = $("#ttsFollow").checked; save(); });
+function bindRange(id, vid, key){
+  var el = $(id), lbl = $(vid);
+  el.value = S[key]; lbl.textContent = (+S[key]).toFixed(1);
+  el.addEventListener("input", function(){ S[key] = +el.value; lbl.textContent = (+el.value).toFixed(1); save(); if(key === "ttsRate") updCount(); });
+}
+bindRange("#ttsRate", "#ttsRateV", "ttsRate");
+bindRange("#ttsPitch", "#ttsPitchV", "ttsPitch");
+bindRange("#ttsVol", "#ttsVolV", "ttsVol");
+$("#ttsVoice").addEventListener("change", function(){
+  var v = voices[parseInt($("#ttsVoice").value)];
+  if(v){ S.ttsVoice = v.name; save(); }
+});
+
+/* ================================================================
+   INSTALL PROMPT
+   ================================================================ */
+var deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault(); deferredPrompt = e;
+  $("#grpInstall").style.display = "";
+});
+$("#btnInstall").addEventListener("click", function(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; $("#grpInstall").style.display = "none"; });
+});
+
+/* ================================================================
+   KEYBOARD
+   ================================================================ */
+document.addEventListener("keydown", function(e){
+  if(e.ctrlKey && e.code === "Space"){ e.preventDefault(); if(mode === "listening") pauseRec(); else startRec(); }
+  else if(e.key === "Escape" && mode !== "idle"){ setModeIdle(); }
+});
+
+/* ================================================================
+   INIT
+   ================================================================ */
+updCount();
+reflectMode();
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("service-worker.js").catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
