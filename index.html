@@ -32,15 +32,14 @@
   }
 
   .banner{display:flex; align-items:center; gap:9px; padding:5px 12px; background:#000; border-bottom:1px solid var(--line);}
-  .banner img{width:32px; height:32px;}
-  .banner .t1{color:var(--gold); font-weight:700; font-size:16px; line-height:1.1;}
-  .banner .t2{color:var(--gold-deep); font-size:11px;}
-  .banner .ver{margin-left:auto; color:var(--gold); font-size:10px; font-weight:700;}
+  .banner img{width:32px; height:32px; flex:0 0 auto;}
+  .banner .id{flex:0 0 auto;}
+  .banner .t1{color:var(--gold); font-weight:700; font-size:16px; line-height:1.1; white-space:nowrap;}
+  .banner .t2{color:var(--gold-deep); font-size:11px; white-space:nowrap;}
+  .banner .note{color:var(--dim); font-size:11px; flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .banner .ver{flex:0 0 auto; color:var(--gold); font-size:10px; font-weight:700;}
 
-  #notice{
-    background:#2a1a00; color:var(--gold); font-size:12px; line-height:1.45;
-    padding:7px 12px; border-bottom:1px solid var(--line); display:none;
-  }
+  #notice{background:#2a1a00; color:var(--gold); font-size:12px; line-height:1.45; padding:7px 12px; border-bottom:1px solid var(--line); display:none;}
   #notice.show{display:block;}
   #notice b{color:#fff;}
 
@@ -52,24 +51,22 @@
   }
   button:active,.btn:active{background:var(--panel2);}
   button:disabled{opacity:.38;}
-  .btn.sec{border-color:var(--gold-deep); color:var(--gold-deep); min-height:30px; font-size:12px;}
-  .btn.wide{flex:1 1 100%;}
+  .btn.sec,button.sec{border-color:var(--gold-deep); color:var(--gold-deep); min-height:30px; font-size:12px;}
 
   .ctl{padding:6px 10px 4px; display:flex; gap:6px;}
-  .ctl .rec{font-size:14px; min-height:42px; border-color:var(--ok); color:var(--ok);}
+  .ctl .rec{font-size:14px; min-height:44px; border-color:var(--ok); color:var(--ok); touch-action:none; user-select:none;}
   .ctl .rec.live{border-color:var(--rec); color:#fff; background:#2a0000; animation:pulse 1.4s ease-in-out infinite;}
   .ctl .rec.paused{border-color:var(--gold); color:var(--gold); animation:none;}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,75,75,.45);}50%{box-shadow:0 0 0 7px rgba(255,75,75,0);}}
-  .ctl .sm{flex:0 0 46px; min-height:42px; font-size:16px;}
+  .ctl .sm{flex:0 0 46px; min-height:44px; font-size:16px;}
 
-  .meter{margin:2px 10px 0; height:6px; border-radius:4px; background:#222; border:1px solid var(--line); overflow:hidden;}
+  .meter{margin:2px 10px 0; height:6px; border-radius:4px; background:#222; border:1px solid var(--line); overflow:hidden; position:relative;}
   .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--ok),var(--gold),var(--rec)); transition:width .06s linear;}
 
-  .interim{
-    margin:4px 10px 0; min-height:20px; font-size:12.5px; color:var(--gold-deep);
-    font-style:italic; line-height:1.4; white-space:pre-wrap; word-break:break-word;
-  }
-  .interim:empty::before{content:"Press Start and dictate\2026"; opacity:.5;}
+  .interim{margin:4px 10px 0; min-height:20px; font-size:12.5px; color:var(--gold-deep); font-style:italic; line-height:1.4; white-space:pre-wrap; word-break:break-word; display:flex; align-items:flex-start; gap:6px;}
+  .interim .txt{flex:1 1 auto;}
+  .interim .txt:empty::before{content:"Press Start and dictate\2026"; opacity:.5;}
+  .interim .q{flex:0 0 auto; min-height:0; padding:1px 7px; font-size:11px; border-radius:999px; border-color:var(--gold-deep); color:var(--gold-deep); font-style:normal;}
 
   #memo{
     flex:1 1 auto; margin:6px 10px; padding:11px 12px; resize:none;
@@ -78,39 +75,38 @@
     outline:none; -webkit-user-select:text; user-select:text;
   }
   #memo:focus{border-color:var(--gold-deep);}
+  #memo.dragover{border-color:var(--gold); background:#241f08;}
   #memo::selection{background:var(--gold); color:#000;}
 
   .tools{display:flex; gap:5px; padding:4px 10px; flex-wrap:wrap;}
-  .tools button{flex:1 1 60px; min-height:32px; font-size:12px; padding:6px 6px;}
+  .tools button{flex:1 1 84px; min-height:32px; font-size:12px; padding:6px 6px;}
 
-  .status{
-    padding:5px 12px; color:var(--gold-deep); font-size:11.5px; border-top:1px solid var(--line);
-    background:#000; display:flex; gap:12px; white-space:nowrap; overflow:hidden;
-  }
+  .status{padding:5px 12px; color:var(--gold-deep); font-size:11.5px; border-top:1px solid var(--line); background:#000; display:flex; gap:12px; white-space:nowrap; overflow:hidden;}
   .status .grow{flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; color:var(--dim);}
+  .status .saved{color:var(--ok);}
 
-  /* bottom sheets */
   .backdrop{position:absolute; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .18s; z-index:20;}
   .backdrop.show{opacity:1; pointer-events:auto;}
   .sheet{
     position:absolute; left:0; right:0; bottom:0; z-index:21;
     background:var(--panel); border-top:2px solid var(--gold-deep);
-    border-radius:14px 14px 0 0; padding:10px 12px 14px;
-    transform:translateY(102%); transition:transform .22s ease; max-height:82%; overflow-y:auto;
+    border-radius:14px 14px 0 0; padding:10px 12px 16px;
+    transform:translateY(102%); transition:transform .22s ease; max-height:84%; overflow-y:auto;
   }
   .sheet.show{transform:translateY(0);}
   .sheet h3{margin:2px 0 8px; color:var(--gold); font-size:14px; display:flex; align-items:center; gap:8px;}
-  .sheet h3 .x{margin-left:auto; border:none; background:none; color:var(--gold-deep); font-size:20px; min-height:0; padding:0 4px;}
+  .sheet h3 .x{margin-left:auto; border:none; background:none; color:var(--gold-deep); font-size:22px; min-height:0; padding:0 4px;}
   .sheet .grp{border:1px solid var(--line); border-radius:9px; padding:8px 10px; margin-bottom:9px;}
   .sheet .grp > .lbl{color:var(--gold-deep); font-size:10px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
 
-  .field{display:flex; align-items:center; gap:9px; padding:5px 0; font-size:12.5px; color:var(--text);}
-  .field label{flex:1 1 auto;}
+  .field{display:flex; align-items:center; gap:9px; padding:5px 0; font-size:12.5px; color:var(--text); flex-wrap:wrap;}
+  .field > label{flex:1 1 auto;}
   .field .hint{flex:1 1 100%; font-size:11px; color:var(--gold-deep); line-height:1.4; padding-top:2px;}
   select,input[type=text]{
     background:var(--field); color:var(--gold); border:1px solid var(--gold-deep);
-    border-radius:7px; padding:6px 8px; font:inherit; font-size:12.5px; max-width:62%;
+    border-radius:7px; padding:6px 8px; font:inherit; font-size:12.5px; max-width:100%;
   }
+  .field select,.field input[type=text]{max-width:60%;}
   input[type=range]{ -webkit-appearance:none; appearance:none; width:150px; height:20px; background:transparent;}
   input[type=range]::-webkit-slider-runnable-track{height:5px; border-radius:3px; background:#333; border:1px solid var(--line);}
   input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:17px; height:17px; margin-top:-7px; border-radius:50%; background:var(--gold); border:2px solid #7a6410;}
@@ -125,37 +121,53 @@
   .sw input:checked + i::after{transform:translateX(20px); background:var(--gold);}
 
   .rowbtns{display:flex; gap:6px; flex-wrap:wrap;}
-  .rowbtns button{flex:1 1 45%; min-height:34px;}
+  .rowbtns button{flex:1 1 44%; min-height:34px;}
 
   .results{font-size:12.5px;}
   .results .empty{color:var(--gold-deep); padding:8px 2px;}
   .item{border-bottom:1px solid #1e1a0c; padding:8px 2px;}
   .item .m{color:var(--dim); line-height:1.4; margin-bottom:5px;}
   .item .m b{color:var(--gold);}
+  .item .snip{color:var(--gold-deep); font-size:11.5px;}
   .item .sugg{display:flex; gap:5px; flex-wrap:wrap;}
   .item .sugg button{flex:0 0 auto; min-height:28px; padding:4px 9px; font-size:12px; border-radius:999px;}
   .item .sugg button.ghost{border-color:var(--gold-deep); color:var(--gold-deep);}
 
-  .mic-list{font-size:12px; color:var(--dim); line-height:1.5;}
-  .mic-list li{margin-left:4px;}
+  .mic-list{font-size:12px; color:var(--dim); line-height:1.5; margin:4px 0 0; padding-left:18px;}
 
-  .toast{
-    position:absolute; left:50%; bottom:64px; transform:translateX(-50%) translateY(10px);
-    background:#000; border:1px solid var(--gold); color:var(--gold); font-size:12.5px;
-    padding:8px 14px; border-radius:999px; opacity:0; pointer-events:none; transition:all .2s; z-index:40; white-space:nowrap;
-  }
+  .cmds{font-size:12.5px; color:var(--text);}
+  .cmds .crow{display:flex; gap:10px; padding:5px 2px; border-bottom:1px solid #1e1a0c;}
+  .cmds .crow code{flex:0 0 42%; color:var(--gold); font-family:inherit; font-weight:700;}
+  .cmds .crow span{flex:1 1 auto; color:var(--dim);}
+
+  .notes .nrow{display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid #1e1a0c;}
+  .notes .nrow .info{flex:1 1 auto; min-width:0; cursor:pointer;}
+  .notes .nrow .nm{color:var(--gold); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .notes .nrow .pv{color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .notes .nrow .dt{color:var(--gold-deep); font-size:10px;}
+  .notes .nrow.active .nm::after{content:" ●"; color:var(--ok);}
+  .notes .nrow .mini{flex:0 0 auto; min-height:28px; padding:3px 8px; font-size:14px; border-color:var(--gold-deep); color:var(--gold-deep);}
+
+  .toast{position:absolute; left:50%; bottom:64px; transform:translateX(-50%) translateY(10px); background:#000; border:1px solid var(--gold); color:var(--gold); font-size:12.5px; padding:8px 14px; border-radius:999px; opacity:0; pointer-events:none; transition:all .2s; z-index:40; white-space:nowrap; max-width:90%; overflow:hidden; text-overflow:ellipsis;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media print{
+    body{background:#fff;} #app{border:none; margin:0; height:auto;}
+    .banner,#notice,.ctl,.meter,.interim,.tools,.status,.backdrop,.sheet,.toast{display:none !important;}
+    #memo{color:#000; background:#fff; border:none; margin:0; font-size:12pt; white-space:pre-wrap;}
+  }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="banner">
     <img src="icon.svg" alt="">
-    <div>
+    <div class="id">
       <div class="t1">DSR Systems</div>
       <div class="t2">DSR Dictation</div>
     </div>
-    <div class="ver">Version 1a</div>
+    <div class="note" id="noteName">Untitled</div>
+    <div class="ver">Version 1b</div>
   </div>
 
   <div id="notice"></div>
@@ -165,26 +177,40 @@
     <button id="btnStop" class="sm" type="button" title="Stop" disabled>&#9632;</button>
   </div>
   <div class="meter"><i id="meterBar"></i></div>
-  <div id="interim" class="interim"></div>
+  <div class="interim" aria-live="polite"><span class="txt" id="interim"></span><button class="q" id="btnCmdsQuick" type="button">? commands</button></div>
 
-  <textarea id="memo" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Your dictated text appears here. You can also type or paste. Everything is saved on this device automatically."></textarea>
+  <textarea id="memo" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Your dictated text appears here. You can also type, paste, or drop a .txt file. Everything is saved on this device automatically."></textarea>
 
   <div class="tools">
-    <button data-sheet="export" type="button">&#128203; Export</button>
-    <button data-sheet="speak"  type="button">&#128266; Read aloud</button>
-    <button data-sheet="spell"  type="button">&#10003; Spelling</button>
-    <button data-sheet="grammar" type="button">&#182; Grammar</button>
-    <button data-sheet="edit"   type="button">&#9998; Edit</button>
+    <button data-sheet="notes"    type="button">&#128209; Notes</button>
+    <button data-sheet="export"   type="button">&#128203; Export</button>
+    <button data-sheet="speak"    type="button">&#128266; Read aloud</button>
+    <button data-sheet="spell"    type="button">&#10003; Spelling</button>
+    <button data-sheet="grammar"  type="button">&#182; Grammar</button>
+    <button data-sheet="edit"     type="button">&#9998; Edit</button>
     <button data-sheet="settings" type="button">&#9881; Settings</button>
   </div>
 
   <div class="status">
     <span id="stCount">0 words</span>
     <span id="stMode">Idle</span>
-    <span class="grow" id="stMsg"></span>
+    <span class="grow" id="stMsg" aria-live="polite"></span>
+    <span id="stSaved" class="saved"></span>
   </div>
 
   <div class="backdrop" id="backdrop"></div>
+
+  <!-- NOTES -->
+  <div class="sheet" id="sheet-notes" data-name="notes">
+    <h3>&#128209; Notes <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="rowbtns">
+        <button id="btnNewNote" type="button">&#10133; New note</button>
+        <button id="btnRenameNote" class="sec" type="button">&#9998; Rename current</button>
+      </div>
+    </div>
+    <div class="grp"><div class="lbl">Saved notes</div><div class="notes" id="notesList"></div></div>
+  </div>
 
   <!-- EXPORT -->
   <div class="sheet" id="sheet-export" data-name="export">
@@ -194,9 +220,13 @@
         <button id="btnCopy" type="button">&#128203; Copy all</button>
         <button id="btnCopyClear" type="button">Copy &amp; clear</button>
         <button id="btnShare" type="button">&#128228; Share&hellip;</button>
+        <button id="btnPaste" type="button">&#128203; Paste in</button>
         <button id="btnDownload" type="button">&#11015; Download .txt</button>
+        <button id="btnDownloadMd" type="button">&#11015; Download .md</button>
+        <button id="btnPrint" type="button">&#128424; Print</button>
         <button id="btnClear" class="sec" type="button">&#128465; Clear all</button>
         <button id="btnUndo" class="sec" type="button">&#8630; Undo</button>
+        <button id="btnRedo" class="sec" type="button">&#8631; Redo</button>
       </div>
     </div>
     <div class="grp" id="grpInstall" style="display:none;">
@@ -218,6 +248,7 @@
     <div class="grp">
       <div class="rowbtns">
         <button id="btnPlay" type="button">&#9654; Play</button>
+        <button id="btnPlayCursor" type="button">&#9654; From cursor</button>
         <button id="btnPauseTts" type="button">&#10073;&#10073; Pause</button>
         <button id="btnStopTts" type="button">&#9632; Stop</button>
         <button id="btnPreview" class="sec" type="button">&#128264; Test voice</button>
@@ -234,7 +265,7 @@
         <button id="btnSpell" type="button">&#128269; Check spelling</button>
         <button id="btnSpellClear" class="sec" type="button">Clear results</button>
       </div>
-      <div class="field"><span class="hint">Uses the dictionary chosen in Settings. First run downloads it once (~1&nbsp;MB), then works offline.</span></div>
+      <div class="field"><span class="hint">Uses the dictionary chosen in Settings. First run downloads it once (~1&nbsp;MB), then works offline. Tap a word to jump to it in the note.</span></div>
     </div>
     <div class="grp"><div class="lbl">Results</div><div class="results" id="spellOut"><div class="empty">Not checked yet.</div></div></div>
   </div>
@@ -249,7 +280,7 @@
         <button id="btnGrammarClear" class="sec" type="button">Clear results</button>
       </div>
       <div class="field"><label for="gLT">Also use LanguageTool (online)</label><span class="sw"><input type="checkbox" id="gLT"><i></i></span></div>
-      <div class="field"><span class="hint" id="gLTHint">Off = quick offline checks only (spacing, repeats, capitalisation, a/an, common slips). On = also sends the text to api.languagetool.org for a deeper check.</span></div>
+      <div class="field"><span class="hint" id="gLTHint">Off = quick offline checks only (spacing, repeats, capitalisation, a/an, common slips). On = also sends the text to api.languagetool.org for a deeper check. Tap a result to jump to it.</span></div>
     </div>
     <div class="grp"><div class="lbl">Results</div><div class="results" id="grammarOut"><div class="empty">Not checked yet.</div></div></div>
   </div>
@@ -270,6 +301,27 @@
         <button data-fmt="stamp" type="button">Insert date/time</button>
       </div>
     </div>
+    <div class="grp">
+      <div class="lbl">Find &amp; replace</div>
+      <div class="field"><input type="text" id="findText" placeholder="Find" style="max-width:100%;flex:1 1 100%"></div>
+      <div class="field"><input type="text" id="replaceText" placeholder="Replace with" style="max-width:100%;flex:1 1 100%"></div>
+      <div class="field">
+        <label for="findCase">Match case</label><span class="sw"><input type="checkbox" id="findCase"><i></i></span>
+        <label for="findWord" style="margin-left:10px">Whole word</label><span class="sw"><input type="checkbox" id="findWord"><i></i></span>
+      </div>
+      <div class="rowbtns">
+        <button id="btnFindPrev" type="button">&#9650; Prev</button>
+        <button id="btnFindNext" type="button">&#9660; Next</button>
+        <button id="btnReplaceOne" type="button">Replace</button>
+        <button id="btnReplaceAll" type="button">Replace all</button>
+      </div>
+      <div class="field"><span class="hint" id="findStat"></span></div>
+    </div>
+    <div class="grp">
+      <div class="lbl">Statistics</div>
+      <div class="results" id="statsOut"><div class="empty">&mdash;</div></div>
+      <div class="rowbtns"><button id="btnStats" class="sec" type="button">Refresh stats</button></div>
+    </div>
   </div>
 
   <!-- SETTINGS -->
@@ -278,6 +330,12 @@
 
     <div class="grp">
       <div class="lbl">Dictation</div>
+      <div class="field"><label for="setMode">Mode</label>
+        <select id="setMode">
+          <option value="continuous">Hands-free (continuous)</option>
+          <option value="ptt">Push-to-talk (hold the button)</option>
+        </select>
+      </div>
       <div class="field"><label for="setLang">Accent / language</label>
         <select id="setLang">
           <option value="en-AU">English (Australia)</option>
@@ -290,8 +348,16 @@
           <option value="en-ZA">English (South Africa)</option>
         </select>
       </div>
+      <div class="field"><label for="setSilence">Auto-pause after silence</label>
+        <select id="setSilence">
+          <option value="0">Off</option><option value="10">10 seconds</option>
+          <option value="20">20 seconds</option><option value="30">30 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+      </div>
       <div class="field"><label for="setPunct">Spoken punctuation &amp; commands</label><span class="sw"><input type="checkbox" id="setPunct" checked><i></i></span></div>
-      <div class="field"><span class="hint">Say &ldquo;full stop&rdquo;, &ldquo;comma&rdquo;, &ldquo;question mark&rdquo;, &ldquo;new line&rdquo;, &ldquo;new paragraph&rdquo;, &ldquo;new bullet&rdquo;, &ldquo;open/close quote&rdquo;, &ldquo;capital &lt;word&gt;&rdquo;. Say &ldquo;scratch that&rdquo; to undo the last bit, &ldquo;stop dictation&rdquo; to pause.</span></div>
+      <div class="field"><span class="hint">Full list in <b>? commands</b> above the note. Say &ldquo;scratch that&rdquo; to undo the last bit, &ldquo;stop dictation&rdquo; to pause.</span></div>
+      <div class="field"><label for="setNumbers">Convert spoken numbers to digits</label><span class="sw"><input type="checkbox" id="setNumbers"><i></i></span></div>
       <div class="field"><label for="setCap">Auto-capitalise sentences</label><span class="sw"><input type="checkbox" id="setCap" checked><i></i></span></div>
       <div class="field"><label for="setInterim">Show words as you speak (interim)</label><span class="sw"><input type="checkbox" id="setInterim" checked><i></i></span></div>
       <div class="field"><label for="setContinuous">Keep listening after pauses</label><span class="sw"><input type="checkbox" id="setContinuous" checked><i></i></span></div>
@@ -299,11 +365,12 @@
       <div class="field"><label for="setWake">Keep screen awake while dictating</label><span class="sw"><input type="checkbox" id="setWake" checked><i></i></span></div>
       <div class="field"><label for="setInsert">Insert where the cursor is</label><span class="sw"><input type="checkbox" id="setInsert"><i></i></span></div>
       <div class="field"><span class="hint">Off = always add new text to the end of the note.</span></div>
+      <div class="rowbtns"><button id="btnCmds" class="sec" type="button">&#128172; Voice command list</button></div>
     </div>
 
     <div class="grp">
       <div class="lbl">Microphone</div>
-      <div class="field"><span class="hint">Live dictation always uses your device&rsquo;s <b>default</b> microphone &mdash; the browser&rsquo;s speech engine doesn&rsquo;t let an app pick a specific one. For best accuracy: use a headset or hold the phone 15&ndash;20&nbsp;cm away, in a quiet room, and speak at a steady, natural pace. Choose your preferred input as the system default in Windows Sound settings or Android settings.</span></div>
+      <div class="field"><span class="hint">Live dictation always uses your device&rsquo;s <b>default</b> microphone &mdash; the browser&rsquo;s speech engine doesn&rsquo;t let an app pick a specific one. For best accuracy: use a headset or hold the phone 15&ndash;20&nbsp;cm away, in a quiet room, and speak at a steady, natural pace. Set your preferred input as the system default in Windows Sound settings or Android settings.</span></div>
       <div class="rowbtns"><button id="btnMicTest" type="button">&#127908; Test microphone</button></div>
       <div class="field"><span class="hint" id="micStat"></span></div>
       <ul class="mic-list" id="micList"></ul>
@@ -328,7 +395,17 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1a. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1b. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
+    </div>
+  </div>
+
+  <!-- COMMANDS -->
+  <div class="sheet" id="sheet-cmds" data-name="cmds">
+    <h3>&#128172; Voice commands <button class="x" data-close type="button">&times;</button></h3>
+    <div class="grp">
+      <div class="field"><span class="hint">Spoken while dictating (with &ldquo;Spoken punctuation &amp; commands&rdquo; on).</span></div>
+      <div class="cmds" id="cmdsList"></div>
     </div>
   </div>
 
@@ -344,8 +421,8 @@ function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({"&":"
 
 /* ---------- settings ---------- */
 var DEF = {
-  lang:"en-AU", punct:true, cap:true, interim:true, continuous:true, profanity:false,
-  wake:true, insertAtCursor:false, dict:"en-au", font:18,
+  mode:"continuous", lang:"en-AU", silence:0, punct:true, numbers:false, cap:true, interim:true,
+  continuous:true, profanity:false, wake:true, insertAtCursor:false, dict:"en-au", font:18,
   ttsVoice:"", ttsRate:1, ttsPitch:1, ttsVol:1, ttsFollow:true, useLT:false
 };
 var S = load();
@@ -353,39 +430,119 @@ function load(){ try{ return Object.assign({}, DEF, JSON.parse(LS.getItem("dsrdi
 function save(){ try{ LS.setItem("dsrdict.cfg", JSON.stringify(S)); }catch(e){} }
 
 var memo = $("#memo");
-try{ memo.value = LS.getItem("dsrdict.text") || ""; }catch(e){}
+
+/* ---------- notes store ---------- */
+var notes = [], curId = null;
+function loadNotes(){
+  try{ notes = JSON.parse(LS.getItem("dsrdict.notes")||"[]"); }catch(e){ notes = []; }
+  try{ curId = LS.getItem("dsrdict.curNote") || null; }catch(e){}
+  if(!Array.isArray(notes) || !notes.length){
+    var legacy = "";
+    try{ legacy = LS.getItem("dsrdict.text") || ""; }catch(e){}
+    notes = [{ id: uid(), name: nameFrom(legacy), text: legacy, created: Date.now(), updated: Date.now() }];
+    curId = notes[0].id;
+    persistNotes();
+  }
+  if(!getNote(curId)) curId = notes[0].id;
+  memo.value = getNote(curId).text || "";
+  paintNoteName();
+}
+function uid(){ return "n" + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function getNote(id){ for(var i=0;i<notes.length;i++) if(notes[i].id===id) return notes[i]; return null; }
+function nameFrom(t){ var l=(t||"").split("\n").find(function(x){ return x.trim(); }); return l ? l.trim().slice(0,40) : "Untitled"; }
+function persistNotes(){ try{ LS.setItem("dsrdict.notes", JSON.stringify(notes)); LS.setItem("dsrdict.curNote", curId); }catch(e){} }
 var saveTextT;
-function saveText(){ clearTimeout(saveTextT); saveTextT = setTimeout(function(){ try{ LS.setItem("dsrdict.text", memo.value); }catch(e){} }, 300); }
+function saveText(){
+  clearTimeout(saveTextT);
+  $("#stSaved").textContent = "…";
+  saveTextT = setTimeout(function(){
+    var n = getNote(curId);
+    if(n){ n.text = memo.value; n.updated = Date.now(); if(n.name === "Untitled" || !n.name) n.name = nameFrom(memo.value); persistNotes(); paintNoteName(); }
+    $("#stSaved").textContent = "Saved";
+    setTimeout(function(){ if($("#stSaved").textContent==="Saved") $("#stSaved").textContent=""; }, 1500);
+  }, 350);
+}
+function paintNoteName(){ var n=getNote(curId); $("#noteName").textContent = n ? (n.name||"Untitled") : "Untitled"; }
+function switchNote(id){
+  var n = getNote(curId); if(n){ n.text = memo.value; n.updated = Date.now(); }
+  curId = id; persistNotes();
+  memo.value = getNote(curId).text || "";
+  undoStack = []; redoStack = [];
+  onMemoChanged(); paintNoteName(); renderNotes();
+  toast("Opened “" + (getNote(curId).name||"Untitled") + "”");
+}
+function renderNotes(){
+  var box = $("#notesList"); box.innerHTML = "";
+  notes.slice().sort(function(a,b){ return b.updated - a.updated; }).forEach(function(n){
+    var row = document.createElement("div"); row.className = "nrow" + (n.id===curId ? " active" : "");
+    var info = document.createElement("div"); info.className = "info";
+    info.innerHTML = "<div class='nm'>" + esc(n.name||"Untitled") + "</div><div class='pv'>" + esc((n.text||"").replace(/\s+/g," ").slice(0,60) || "(empty)") + "</div><div class='dt'>" + new Date(n.updated).toLocaleString() + "</div>";
+    info.addEventListener("click", function(){ if(n.id!==curId) switchNote(n.id); });
+    row.appendChild(info);
+    var dup = document.createElement("button"); dup.className = "mini"; dup.title = "Duplicate"; dup.textContent = "⧉";
+    dup.addEventListener("click", function(){ var c={ id:uid(), name:(n.name||"Untitled")+" copy", text:n.text, created:Date.now(), updated:Date.now() }; notes.push(c); persistNotes(); renderNotes(); });
+    var del = document.createElement("button"); del.className = "mini"; del.title = "Delete"; del.textContent = "🗑";
+    del.addEventListener("click", function(){
+      if(notes.length===1){ toast("Can't delete the only note"); return; }
+      if(!confirm("Delete “" + (n.name||"Untitled") + "”?")) return;
+      notes = notes.filter(function(x){ return x.id!==n.id; });
+      if(curId===n.id){ curId = notes[0].id; memo.value = getNote(curId).text||""; undoStack=[]; redoStack=[]; onMemoChanged(); paintNoteName(); }
+      persistNotes(); renderNotes();
+    });
+    row.appendChild(dup); row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+$("#btnNewNote").addEventListener("click", function(){
+  var n = getNote(curId); if(n){ n.text = memo.value; n.updated = Date.now(); }
+  var fresh = { id: uid(), name: "Untitled", text: "", created: Date.now(), updated: Date.now() };
+  notes.push(fresh); curId = fresh.id; persistNotes();
+  memo.value = ""; undoStack=[]; redoStack=[]; onMemoChanged(); paintNoteName(); renderNotes();
+  toast("New note");
+});
+$("#btnRenameNote").addEventListener("click", function(){
+  var n = getNote(curId); if(!n) return;
+  var v = prompt("Note name:", n.name||"Untitled");
+  if(v!=null){ n.name = v.trim().slice(0,60) || "Untitled"; n.updated = Date.now(); persistNotes(); paintNoteName(); renderNotes(); }
+});
 
 /* ---------- toast + status ---------- */
 var toastT;
-function toast(m){ var t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
+function toast(m){ var t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1900); }
 function setMsg(m){ $("#stMsg").textContent = m||""; }
 function updCount(){
   var txt = memo.value.trim();
   var w = txt ? txt.split(/\s+/).length : 0;
   var c = memo.value.length;
-  var secs = Math.round(w / (200*S.ttsRate) * 60);
-  $("#stCount").textContent = w + (w===1?" word":" words") + " · " + c + " chars" + (w? " · ~"+fmtDur(secs)+" aloud":"");
+  var secs = w ? Math.round(w / (200*S.ttsRate) * 60) : 0;
+  $("#stCount").textContent = w + (w===1?" word":" words") + " · " + c + " chars" + (w ? " · ~"+fmtDur(secs)+" aloud" : "");
 }
 function fmtDur(s){ if(s<60) return s+"s"; var m=Math.floor(s/60); return m+"m "+(s%60)+"s"; }
 
-/* ---------- undo ---------- */
-var undoStack = [], lastUndoPush = 0;
+/* ---------- undo / redo ---------- */
+var undoStack = [], redoStack = [], lastUndoPush = 0;
 function pushUndo(force){
   var now = Date.now();
+  if(!force && now - lastUndoPush < 1400 && undoStack.length && undoStack[undoStack.length-1] === undoStack[undoStack.length-1]) { /* still throttle */ }
   if(!force && now - lastUndoPush < 1400) return;
   lastUndoPush = now;
   undoStack.push(memo.value);
-  if(undoStack.length > 40) undoStack.shift();
+  if(undoStack.length > 50) undoStack.shift();
+  redoStack.length = 0;
 }
 function doUndo(){
   if(!undoStack.length){ toast("Nothing to undo"); return; }
+  redoStack.push(memo.value);
   memo.value = undoStack.pop();
   onMemoChanged(); toast("Undone");
 }
+function doRedo(){
+  if(!redoStack.length){ toast("Nothing to redo"); return; }
+  undoStack.push(memo.value);
+  memo.value = redoStack.pop();
+  onMemoChanged(); toast("Redone");
+}
 function onMemoChanged(){ updCount(); saveText(); }
-
 memo.addEventListener("input", onMemoChanged);
 
 /* ---------- sheets ---------- */
@@ -395,6 +552,9 @@ function openSheet(name){
   var s = $("#sheet-"+name); if(!s) return;
   s.classList.add("show"); backdrop.classList.add("show");
   if(name==="settings") refreshMicList(false);
+  if(name==="notes") renderNotes();
+  if(name==="edit") refreshStats();
+  if(name==="cmds") renderCmds();
 }
 function closeSheet(){
   document.querySelectorAll(".sheet.show").forEach(function(s){ s.classList.remove("show"); });
@@ -403,18 +563,20 @@ function closeSheet(){
 document.querySelectorAll("[data-sheet]").forEach(function(b){ b.addEventListener("click", function(){ openSheet(b.dataset.sheet); }); });
 document.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", closeSheet); });
 backdrop.addEventListener("click", closeSheet);
+$("#btnCmdsQuick").addEventListener("click", function(){ openSheet("cmds"); });
+$("#btnCmds").addEventListener("click", function(){ openSheet("cmds"); });
 
 /* ================================================================
    SPEECH RECOGNITION
    ================================================================ */
 var Recog = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 var rec = null, mode = "idle", manualStop = false, lastStart = 0, restartT = null;
-var lastInsert = "", lastInsertRange = null;
+var lastInsert = "", lastInsertRange = null, silenceT = null, capsLock = false;
 
 function notice(html){ var n=$("#notice"); if(!html){ n.classList.remove("show"); return; } n.innerHTML = html; n.classList.add("show"); }
 
 if(!Recog){
-  notice("<b>Live dictation isn&rsquo;t available in this browser.</b> Open DSR Dictation in Chrome on the desktop, or install it from Chrome on Android. You can still type, check spelling &amp; grammar, and use Read aloud here.");
+  notice("<b>Live dictation isn&rsquo;t available in this browser.</b> Open DSR Dictation in Chrome on the desktop, or install it from Chrome on Android. You can still type, check spelling &amp; grammar, use Notes and Read aloud here.");
   $("#btnRec").disabled = true;
 } else if(!window.isSecureContext){
   notice("<b>Microphone blocked:</b> this page must be served over HTTPS for dictation to work.");
@@ -431,58 +593,56 @@ function buildRec(){
   rec.onresult = onResult;
   rec.onerror = onError;
   rec.onend = function(){
-    if(mode === "listening" && !manualStop){
+    if(mode === "listening" && !manualStop && S.mode === "continuous" && S.continuous){
       var gap = Date.now() - lastStart;
       var wait = gap < 700 ? 900 : 120;
       clearTimeout(restartT);
       restartT = setTimeout(function(){ if(mode==="listening"){ try{ rec.start(); }catch(e){} } }, wait);
+    } else if(mode === "listening" && S.mode === "continuous" && !manualStop){
+      setModeIdle();
     }
   };
 }
-
 function onError(e){
   var err = e.error || "";
   if(err === "not-allowed" || err === "service-not-allowed"){
     setModeIdle();
     notice("<b>Microphone permission denied.</b> Allow the microphone for this site in your browser settings, then press Start again.");
-  } else if(err === "audio-capture"){
-    setModeIdle();
-    toast("No microphone found");
-  } else if(err === "no-speech"){
-    setMsg("No speech heard – still listening…");
-  } else if(err === "network"){
-    setMsg("Speech network hiccup – retrying…");
-  } else if(err === "aborted"){
-    /* normal on stop */
-  } else {
-    setMsg("Speech error: " + err);
+  } else if(err === "audio-capture"){ setModeIdle(); toast("No microphone found"); }
+  else if(err === "no-speech"){ setMsg("No speech heard – still listening…"); }
+  else if(err === "network"){ setMsg("Speech network hiccup – retrying…"); }
+  else if(err === "aborted"){ /* normal */ }
+  else { setMsg("Speech error: " + err); }
+}
+function armSilence(){
+  clearTimeout(silenceT);
+  if(S.mode === "continuous" && +S.silence > 0 && mode === "listening"){
+    silenceT = setTimeout(function(){ if(mode==="listening"){ pauseRec(); toast("Paused after " + S.silence + "s silence"); } }, +S.silence * 1000);
   }
 }
-
 function startRec(){
   if(!Recog) return;
   notice("");
   if(!rec) buildRec();
   rec.interimResults = S.interim;
   rec.lang = S.lang;
-  manualStop = false;
-  mode = "listening";
-  try{ rec.start(); }catch(e){ /* already running */ }
-  reflectMode();
-  startMeter();
+  if("profanityFilter" in rec) rec.profanityFilter = S.profanity;
+  manualStop = false; mode = "listening";
+  try{ rec.start(); }catch(e){}
+  reflectMode(); startMeter(); armSilence();
   if(S.wake) reqWake();
-  if(speechSynthesis.speaking){ speechSynthesis.cancel(); }
+  if(window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.cancel();
 }
 function pauseRec(){
   manualStop = true; mode = "paused";
-  clearTimeout(restartT);
+  clearTimeout(restartT); clearTimeout(silenceT);
   try{ rec && rec.stop(); }catch(e){}
   reflectMode(); stopMeter(); relWake();
   $("#interim").textContent = "";
 }
 function setModeIdle(){
   manualStop = true; mode = "idle";
-  clearTimeout(restartT);
+  clearTimeout(restartT); clearTimeout(silenceT);
   try{ rec && rec.stop(); }catch(e){}
   reflectMode(); stopMeter(); relWake();
   $("#interim").textContent = ""; setMsg("");
@@ -490,14 +650,23 @@ function setModeIdle(){
 function reflectMode(){
   var b = $("#btnRec");
   b.classList.remove("live","paused");
+  if(S.mode === "ptt"){
+    if(mode === "listening"){ b.classList.add("live"); b.innerHTML = "&#127908; Listening – release to stop"; $("#stMode").textContent = "Listening"; $("#btnStop").disabled = true; }
+    else { b.innerHTML = "&#127908; Hold to talk"; $("#stMode").textContent = "Idle"; $("#btnStop").disabled = true; }
+    return;
+  }
   if(mode === "listening"){ b.classList.add("live"); b.innerHTML = "&#10073;&#10073; Pause"; $("#btnStop").disabled = false; $("#stMode").textContent = "Listening"; }
   else if(mode === "paused"){ b.classList.add("paused"); b.innerHTML = "&#9679; Resume"; $("#btnStop").disabled = false; $("#stMode").textContent = "Paused"; }
   else { b.innerHTML = "&#9679; Start dictation"; $("#btnStop").disabled = true; $("#stMode").textContent = "Idle"; }
 }
-
-$("#btnRec").addEventListener("click", function(){
-  if(mode === "listening") pauseRec();
-  else startRec();
+var rb = $("#btnRec");
+rb.addEventListener("click", function(){
+  if(S.mode === "ptt") return;
+  if(mode === "listening") pauseRec(); else startRec();
+});
+rb.addEventListener("pointerdown", function(e){ if(S.mode==="ptt" && !rb.disabled){ e.preventDefault(); startRec(); } });
+["pointerup","pointerleave","pointercancel"].forEach(function(ev){
+  rb.addEventListener(ev, function(){ if(S.mode==="ptt" && mode==="listening") pauseRec(); });
 });
 $("#btnStop").addEventListener("click", setModeIdle);
 
@@ -510,6 +679,7 @@ function onResult(e){
     else interim += r[0].transcript;
   }
   $("#interim").textContent = S.interim ? interim : "";
+  armSilence();
 }
 
 var CMD = {
@@ -520,25 +690,28 @@ var CMD = {
   "open bracket":"(", "close bracket":")", "open parenthesis":"(", "close parenthesis":")",
   "open quote":"“", "close quote":"”", "quote":"\"", "apostrophe":"’",
   "hyphen":"-", "dash":" – ", "ellipsis":"…", "dot dot dot":"…",
-  "new bullet":"\n• ", "bullet point":"\n• ", "ampersand":"&", "percent sign":"%",
+  "new bullet":"\n• ", "bullet point":"\n• ", "new heading":"\n\n",
+  "ampersand":"&", "percent sign":"%", "at sign":"@", "hash":"#", "asterisk":"*",
   "smiley face":"🙂", "sad face":"🙁", "winky face":"😉"
 };
 var HUG_LEFT = {".":1,",":1,"?":1,"!":1,":":1,";":1,")":1,"”":1,"…":1,"%":1};
-
 function cleanKey(w){ return w.toLowerCase().replace(/[^a-z' ]/g,""); }
 
 function commit(raw){
   raw = (raw||"").replace(/\s+/g," ").trim();
   if(!raw) return;
-
   var whole = raw.toLowerCase().replace(/[^a-z ]/g,"").trim();
-  if(whole === "scratch that" || whole === "delete that" || whole === "undo that"){
-    scratchLast(); return;
-  }
-  if(whole === "stop dictation" || whole === "stop listening" || whole === "pause dictation" || whole === "pause listening"){
-    pauseRec(); toast("Dictation paused"); return;
-  }
-  if(whole === "new paragraph"){ insertText("\n\n"); return; }
+  if(whole==="scratch that" || whole==="delete that" || whole==="undo that"){ scratchLast(); return; }
+  if(whole==="delete last word"){ deleteTail(/\s*\S+\s*$/); return; }
+  if(whole==="delete last sentence"){ deleteTail(/[^.!?\n]*[.!?]?\s*$/); return; }
+  if(whole==="delete last line"){ deleteTail(/[^\n]*\n?$/); return; }
+  if(whole==="stop dictation" || whole==="stop listening" || whole==="pause dictation" || whole==="pause listening"){ pauseRec(); toast("Dictation paused"); return; }
+  if(whole==="caps on" || whole==="caps lock on"){ capsLock = true; toast("CAPS on"); return; }
+  if(whole==="caps off" || whole==="caps lock off"){ capsLock = false; toast("CAPS off"); return; }
+  if(whole==="new paragraph"){ insertText("\n\n"); return; }
+  if(whole==="join lines" || whole==="join line"){ pushUndo(true); memo.value = memo.value.replace(/\n+$/,"").replace(/([^\n])\n([^\n])/g,"$1 $2"); onMemoChanged(); return; }
+
+  if(S.numbers) raw = wordsToNumbers(raw);
 
   var words = raw.split(" ");
   var toks = [];
@@ -547,26 +720,20 @@ function commit(raw){
     var k1 = cleanKey(w);
     var k2 = (i+1 < words.length) ? (k1 + " " + cleanKey(words[i+1])) : null;
     var k3 = (i+2 < words.length) ? (k2 + " " + cleanKey(words[i+2])) : null;
-
     if(S.punct && k3 && CMD[k3] != null){ pushCmd(toks, CMD[k3]); i += 2; continue; }
     if(S.punct && k2 && CMD[k2] != null){ pushCmd(toks, CMD[k2]); i += 1; continue; }
     if(S.punct && CMD[k1] != null){ pushCmd(toks, CMD[k1]); continue; }
-    if(S.punct && (k1 === "capital" || k1 === "capitalise" || k1 === "capitalize") && words[i+1]){
-      i++; toks.push({t:"text", v: capFirst(words[i])}); continue;
-    }
-    if(S.punct && k1 === "all" && cleanKey(words[i+1]||"") === "caps" && words[i+2]){
-      i += 2; toks.push({t:"text", v: words[i].toUpperCase()}); continue;
-    }
+    if(S.punct && (k1==="capital"||k1==="capitalise"||k1==="capitalize") && words[i+1]){ i++; toks.push({t:"text", v:capFirst(words[i])}); continue; }
+    if(S.punct && k1==="all" && cleanKey(words[i+1]||"")==="caps" && words[i+2]){ i += 2; toks.push({t:"text", v:words[i].toUpperCase()}); continue; }
     toks.push({t:"text", v:w});
   }
-
   var chunk = buildChunk(toks);
   if(!chunk) return;
-  if(S.cap) chunk = applyCaps(chunk, tailOf(currentText()));
+  if(capsLock) chunk = chunk.toUpperCase();
+  else if(S.cap) chunk = applyCaps(chunk);
   var sep = leadSep(currentText(), chunk);
   insertText(sep + chunk);
 }
-
 function pushCmd(toks, v){
   if(v.charAt(0) === "\n") toks.push({t:"nl", v:v});
   else if(v.length === 1 && (HUG_LEFT[v] || v === "(" || v === "“")) toks.push({t:"punct", v:v});
@@ -588,10 +755,8 @@ function buildChunk(toks){
   }
   return s;
 }
-function tailOf(t){ return t.slice(-1); }
 function currentText(){
-  if(S.insertAtCursor && document.activeElement === memo)
-    return memo.value.slice(0, memo.selectionStart);
+  if(S.insertAtCursor && document.activeElement === memo) return memo.value.slice(0, memo.selectionStart);
   return memo.value;
 }
 function leadSep(existing, chunk){
@@ -602,14 +767,14 @@ function leadSep(existing, chunk){
   return " ";
 }
 function capFirst(w){ return w.charAt(0).toUpperCase() + w.slice(1); }
-function applyCaps(chunk, prevTail){
-  var atSentence = !prevTail || /[.!?…]["'”)]?\s*$/.test(currentText()) || /\n\s*$/.test(currentText()) || currentText()==="";
+function applyCaps(chunk){
+  var ctx = currentText();
+  var atSentence = ctx === "" || /[.!?…]["'”)]?\s*$/.test(ctx) || /\n\s*$/.test(ctx);
   if(atSentence) chunk = chunk.replace(/^(\s*[\(“"']?\s*)([a-z])/, function(_,p,c){ return p + c.toUpperCase(); });
   chunk = chunk.replace(/([.!?…]\s+|\n\s*(?:• )?)([a-z])/g, function(_,p,c){ return p + c.toUpperCase(); });
-  chunk = chunk.replace(/\bi\b/g, "I").replace(/\bi'/g, "I'");
+  chunk = chunk.replace(/\bi\b/g, "I").replace(/\bi('|’)(m|ll|ve|d|s|re)\b/gi, function(_,ap,su){ return "I" + ap + su; });
   return chunk;
 }
-
 function insertText(str){
   pushUndo(false);
   if(S.insertAtCursor && document.activeElement === memo){
@@ -629,15 +794,50 @@ function scratchLast(){
   if(!lastInsert) return;
   if(lastInsertRange){
     var a = lastInsertRange[0], b = lastInsertRange[1];
-    if(memo.value.slice(a,b) === lastInsert){
-      memo.value = memo.value.slice(0,a) + memo.value.slice(b);
-      try{ memo.setSelectionRange(a,a); }catch(e){}
-    }
+    if(memo.value.slice(a,b) === lastInsert){ memo.value = memo.value.slice(0,a) + memo.value.slice(b); try{ memo.setSelectionRange(a,a); }catch(e){} }
   } else if(memo.value.slice(-lastInsert.length) === lastInsert){
     memo.value = memo.value.slice(0, -lastInsert.length);
   }
-  lastInsert = ""; lastInsertRange = null;
-  onMemoChanged(); toast("Removed last bit");
+  lastInsert = ""; lastInsertRange = null; onMemoChanged(); toast("Removed last bit");
+}
+function deleteTail(reWithEnd){
+  pushUndo(true);
+  memo.value = memo.value.replace(reWithEnd, "");
+  lastInsert = ""; onMemoChanged();
+}
+
+/* ---------- spoken numbers ---------- */
+var N_SMALL = {zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+var N_TENS = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+var N_SCALE = {hundred:100,thousand:1000,million:1000000,billion:1000000000};
+function wordsToNumbers(text){
+  var parts = text.split(/(\s+)/);           // keeps whitespace tokens
+  var out = [], i = 0;
+  function low(x){ return (x||"").toLowerCase().replace(/[^a-z]/g,""); }
+  while(i < parts.length){
+    var w = low(parts[i]);
+    if(parts[i].trim()==="" || (N_SMALL[w]==null && N_TENS[w]==null)){ out.push(parts[i]); i++; continue; }
+    var result = 0, current = 0, seen = false, decimal = "", j = i, last = i;
+    while(j < parts.length){
+      if(parts[j].trim()===""){ j++; continue; }
+      var lw = low(parts[j]);
+      if(lw === "and" && seen){ j++; continue; }
+      if(N_SMALL[lw] != null){ current += N_SMALL[lw]; seen = true; last = j; j++; continue; }
+      if(N_TENS[lw] != null){ current += N_TENS[lw]; seen = true; last = j; j++; continue; }
+      if(lw === "hundred"){ current = (current || 1) * 100; seen = true; last = j; j++; continue; }
+      if(N_SCALE[lw] != null){ result += (current || 1) * N_SCALE[lw]; current = 0; seen = true; last = j; j++; continue; }
+      if(lw === "point"){
+        var k = j + 1, digs = "", dlast = j;
+        while(k < parts.length){ if(parts[k].trim()===""){ k++; continue; } var dl = low(parts[k]); if(N_SMALL[dl] != null && N_SMALL[dl] < 10){ digs += N_SMALL[dl]; dlast = k; k++; } else break; }
+        if(digs){ decimal = "." + digs; last = dlast; }
+        break;
+      }
+      break;
+    }
+    if(seen){ out.push(String(result + current) + decimal); i = last + 1; }   // resume right after the last number word – keeps following spaces
+    else { out.push(parts[i]); i++; }
+  }
+  return out.join("").replace(/(\d)\s*\bper ?cent\b/gi, "$1%");
 }
 
 /* ================================================================
@@ -658,12 +858,11 @@ function startMeter(){
       an.getByteTimeDomainData(buf);
       var sum = 0;
       for(var i=0;i<buf.length;i++){ var v=(buf[i]-128)/128; sum += v*v; }
-      var rms = Math.sqrt(sum/buf.length);
-      var pct = Math.min(100, Math.round(rms * 260));
+      var pct = Math.min(100, Math.round(Math.sqrt(sum/buf.length) * 260));
       bar.style.width = pct + "%";
       meterRAF = requestAnimationFrame(tick);
     })();
-  }).catch(function(){ /* permission handled by recognition */ });
+  }).catch(function(){});
 }
 function stopMeter(){
   if(meterRAF) cancelAnimationFrame(meterRAF); meterRAF = null;
@@ -681,18 +880,13 @@ function refreshMicList(prompt){
     var mics = list.filter(function(d){ return d.kind === "audioinput"; });
     ul.innerHTML = "";
     if(!mics.length){ ul.innerHTML = "<li>(none detected)</li>"; return; }
-    mics.forEach(function(d){
-      var li = document.createElement("li");
-      li.textContent = d.label || "Microphone (allow access to see its name)";
-      ul.appendChild(li);
-    });
+    mics.forEach(function(d){ var li = document.createElement("li"); li.textContent = d.label || "Microphone (allow access to see its name)"; ul.appendChild(li); });
   }).catch(function(){ stat.textContent = "Microphone access was blocked."; });
 }
 $("#btnMicTest").addEventListener("click", function(){
   var stat = $("#micStat");
   stat.textContent = "Testing… speak now.";
-  refreshMicList(true);
-  startMeter();
+  refreshMicList(true); startMeter();
   var t0 = Date.now(), peak = 0;
   var iv = setInterval(function(){
     peak = Math.max(peak, parseInt($("#meterBar").style.width) || 0);
@@ -708,88 +902,66 @@ $("#btnMicTest").addEventListener("click", function(){
    WAKE LOCK
    ================================================================ */
 var wake = null;
-function reqWake(){
-  if(!navigator.wakeLock) return;
-  navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){});
-}
+function reqWake(){ if(!navigator.wakeLock) return; navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){}); }
 function relWake(){ if(wake){ wake.release().catch(function(){}); wake = null; } }
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState === "visible" && (mode === "listening") && S.wake) reqWake();
+  if(document.visibilityState === "visible" && mode === "listening" && S.wake) reqWake();
 });
 
 /* ================================================================
    TEXT TO SPEECH
    ================================================================ */
-var voices = [], ttsQueue = [], ttsIdx = 0, ttsBase = 0, ttsPaused = false, ttsWatch = null;
+var voices = [], ttsQueue = [], ttsIdx = 0, ttsPaused = false, ttsWatch = null;
 function loadVoices(){
-  voices = speechSynthesis.getVoices() || [];
-  var sel = $("#ttsVoice");
-  sel.innerHTML = "";
+  voices = window.speechSynthesis ? (speechSynthesis.getVoices() || []) : [];
+  var sel = $("#ttsVoice"); sel.innerHTML = "";
   if(!voices.length){ sel.innerHTML = "<option>(loading voices…)</option>"; return; }
   var groups = {};
-  voices.forEach(function(v, idx){
-    var g = (v.lang || "??");
-    (groups[g] = groups[g] || []).push({v:v, i:idx});
-  });
+  voices.forEach(function(v, idx){ (groups[v.lang||"??"] = groups[v.lang||"??"] || []).push({v:v, i:idx}); });
   Object.keys(groups).sort(function(a,b){
     var ae = a.indexOf("en")===0, be = b.indexOf("en")===0;
     if(ae !== be) return ae ? -1 : 1;
     return a.localeCompare(b);
   }).forEach(function(g){
     var og = document.createElement("optgroup"); og.label = g;
-    groups[g].forEach(function(o){
-      var opt = document.createElement("option");
-      opt.value = o.i; opt.textContent = o.v.name + (o.v.localService ? "" : " ☁");
-      og.appendChild(opt);
-    });
-    $("#ttsVoice").appendChild(og);
+    groups[g].forEach(function(o){ var opt = document.createElement("option"); opt.value = o.i; opt.textContent = o.v.name + (o.v.localService ? "" : " ☁"); og.appendChild(opt); });
+    sel.appendChild(og);
   });
-  if(S.ttsVoice){
-    var m = voices.findIndex(function(v){ return v.name === S.ttsVoice; });
-    if(m >= 0) sel.value = m;
-  } else {
-    var pref = voices.findIndex(function(v){ return /en-AU/i.test(v.lang); });
-    if(pref < 0) pref = voices.findIndex(function(v){ return /^en/i.test(v.lang); });
-    if(pref >= 0) sel.value = pref;
-  }
+  var pick = -1;
+  if(S.ttsVoice) pick = voices.findIndex(function(v){ return v.name === S.ttsVoice; });
+  if(pick < 0) pick = voices.findIndex(function(v){ return v.lang && v.lang.toLowerCase() === S.lang.toLowerCase(); });
+  if(pick < 0) pick = voices.findIndex(function(v){ return /^en/i.test(v.lang||""); });
+  if(pick >= 0) sel.value = pick;
   $("#ttsHint").textContent = voices.length + " voices available (☁ = online voice). Plays the whole note, or the selected text if you highlight some.";
 }
-if("speechSynthesis" in window){
-  loadVoices();
-  speechSynthesis.onvoiceschanged = loadVoices;
-} else {
-  $("#ttsHint").textContent = "Text-to-speech isn't supported in this browser.";
-}
+if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+else { $("#ttsHint").textContent = "Text-to-speech isn't supported in this browser."; }
 
-function ttsText(){
-  var sel = memo.value.substring(memo.selectionStart, memo.selectionEnd);
-  return { text: sel && sel.trim() ? sel : memo.value, offset: sel && sel.trim() ? memo.selectionStart : 0 };
-}
 function splitSentences(t){
   var parts = t.match(/[^.!?\n]+(?:[.!?]+|\n+|$)/g) || [t];
   var out = [], cur = "", start = 0, pos = 0;
   parts.forEach(function(p){
-    if((cur + p).length > 240 && cur){ out.push({s:cur, at:start}); cur = ""; start = pos; }
+    if((cur + p).length > 240 && cur){ out.push({s:cur, at:start}); cur = ""; }
     if(!cur) start = pos;
     cur += p; pos += p.length;
   });
   if(cur.trim()) out.push({s:cur, at:start});
   return out;
 }
-function play(){
+function play(fromCursor){
   if(!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
-  var info = ttsText();
-  if(!info.text.trim()){ toast("Nothing to read"); return; }
+  var base = 0, text = memo.value;
+  var selA = memo.selectionStart, selB = memo.selectionEnd;
+  if(!fromCursor && selB > selA){ text = memo.value.slice(selA, selB); base = selA; }
+  else if(fromCursor){ base = selA; text = memo.value.slice(selA); }
+  if(!text.trim()){ toast("Nothing to read"); return; }
   if(mode === "listening") pauseRec();
-  var segs = splitSentences(info.text);
-  ttsQueue = segs.map(function(seg){ return { s: seg.s, at: info.offset + seg.at }; });
+  ttsQueue = splitSentences(text).map(function(seg){ return { s: seg.s, at: base + seg.at }; });
   ttsIdx = 0; ttsPaused = false;
   speakNext();
   clearInterval(ttsWatch);
-  ttsWatch = setInterval(function(){
-    if(speechSynthesis.speaking && !speechSynthesis.paused && !ttsPaused) speechSynthesis.resume();
-  }, 9000);
+  ttsWatch = setInterval(function(){ if(speechSynthesis.speaking && !speechSynthesis.paused && !ttsPaused) speechSynthesis.resume(); }, 9000);
 }
 function speakNext(){
   if(ttsIdx >= ttsQueue.length){ endTts(); return; }
@@ -800,8 +972,7 @@ function speakNext(){
   u.rate = S.ttsRate; u.pitch = S.ttsPitch; u.volume = S.ttsVol;
   u.onboundary = function(ev){
     if(!S.ttsFollow || ev.name === "sentence") return;
-    var ci = item.at + (ev.charIndex || 0);
-    var full = memo.value;
+    var ci = item.at + (ev.charIndex || 0), full = memo.value;
     var s = ci; while(s > 0 && /\S/.test(full[s-1])) s--;
     var e = ci; while(e < full.length && /\S/.test(full[e])) e++;
     if(e > s){ try{ memo.setSelectionRange(s, e); }catch(x){} }
@@ -811,20 +982,15 @@ function speakNext(){
   $("#stMode").textContent = "Reading";
   speechSynthesis.speak(u);
 }
-function endTts(){
-  clearInterval(ttsWatch); ttsWatch = null; ttsPaused = false;
-  $("#stMode").textContent = mode === "listening" ? "Listening" : (mode === "paused" ? "Paused" : "Idle");
-}
-$("#btnPlay").addEventListener("click", play);
+function endTts(){ clearInterval(ttsWatch); ttsWatch = null; ttsPaused = false; $("#stMode").textContent = mode==="listening"?"Listening":(mode==="paused"?"Paused":"Idle"); }
+$("#btnPlay").addEventListener("click", function(){ play(false); });
+$("#btnPlayCursor").addEventListener("click", function(){ play(true); });
 $("#btnPauseTts").addEventListener("click", function(){
   if(!("speechSynthesis" in window)) return;
   if(speechSynthesis.speaking && !speechSynthesis.paused){ speechSynthesis.pause(); ttsPaused = true; $("#btnPauseTts").innerHTML = "&#9654; Resume"; }
   else if(speechSynthesis.paused){ speechSynthesis.resume(); ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; }
 });
-$("#btnStopTts").addEventListener("click", function(){
-  if("speechSynthesis" in window) speechSynthesis.cancel();
-  ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; endTts();
-});
+$("#btnStopTts").addEventListener("click", function(){ if("speechSynthesis" in window) speechSynthesis.cancel(); ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; endTts(); });
 $("#btnPreview").addEventListener("click", function(){
   if(!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
@@ -836,9 +1002,21 @@ $("#btnPreview").addEventListener("click", function(){
 });
 
 /* ================================================================
-   SPELL CHECK  (nspell + Hunspell dictionary from jsDelivr)
+   SELECT A RANGE IN THE MEMO
    ================================================================ */
-var speller = null, spellerFor = "", spellLoading = null;
+function selectRange(a, b){
+  closeSheet();
+  memo.focus();
+  try{ memo.setSelectionRange(a, b); }catch(e){}
+  var line = memo.value.slice(0, a).split("\n").length;
+  var lh = S.font * 1.5;
+  memo.scrollTop = Math.max(0, (line - 3) * lh);
+}
+
+/* ================================================================
+   SPELL CHECK
+   ================================================================ */
+var speller = null, spellerFor = "", spellLoading = null, spellIgnore = {};
 var DICT_URLS = {
   "en-au": ["dictionary-en-au", "dictionary-en-gb"],
   "en-gb": ["dictionary-en-gb"],
@@ -863,18 +1041,12 @@ function loadSpeller(){
       tryPkg(0),
       import("https://cdn.jsdelivr.net/npm/nspell@2.1.5/+esm").then(function(m){ return m.default || m; })
     ]).then(function(res){
-      var pair = res[0], NSpell = res[1];
-      speller = NSpell(pair[0], pair[1]);
-      spellerFor = S.dict; spellLoading = null; setMsg("");
-      return speller;
-    }).catch(function(e){
-      spellLoading = null; setMsg("");
-      throw e;
-    });
+      speller = res[1](res[0][0], res[0][1]);
+      spellerFor = S.dict; spellLoading = null; setMsg(""); return speller;
+    }).catch(function(e){ spellLoading = null; setMsg(""); throw e; });
   })();
   return spellLoading;
 }
-var spellIgnore = {};
 function checkSpelling(){
   var out = $("#spellOut");
   out.innerHTML = "<div class='empty'>Checking…</div>";
@@ -882,15 +1054,13 @@ function checkSpelling(){
     var re = /[A-Za-z][A-Za-z'’]*/g, m, bad = [], seen = {};
     while((m = re.exec(memo.value))){
       var w = m[0];
-      if(w.length < 2) continue;
-      if(/^[A-Z0-9]+$/.test(w)) continue;               // acronyms
-      if(spellIgnore[w.toLowerCase()]) continue;
+      if(w.length < 2 || /^[A-Z0-9]+$/.test(w) || spellIgnore[w.toLowerCase()]) continue;
       var norm = w.replace(/’/g, "'");
       if(sp.correct(norm)) continue;
       var key = w.toLowerCase();
-      if(seen[key]) { seen[key].count++; continue; }
-      var rec = { word: w, count: 1, sugg: sp.suggest(norm).slice(0, 6) };
-      seen[key] = rec; bad.push(rec);
+      if(seen[key]){ seen[key].count++; continue; }
+      var rc = { word: w, first: m.index, count: 1, sugg: sp.suggest(norm).slice(0, 6) };
+      seen[key] = rc; bad.push(rc);
     }
     renderSpell(bad);
   }).catch(function(){
@@ -901,23 +1071,25 @@ function renderSpell(bad){
   var out = $("#spellOut");
   if(!bad.length){ out.innerHTML = "<div class='empty'>No spelling issues found. ✅</div>"; return; }
   out.innerHTML = "";
-  bad.forEach(function(rec){
+  bad.forEach(function(rc){
     var d = document.createElement("div"); d.className = "item";
     var mm = document.createElement("div"); mm.className = "m";
-    mm.innerHTML = "<b>" + esc(rec.word) + "</b>" + (rec.count > 1 ? " ×" + rec.count : "") + " – not in dictionary";
+    mm.innerHTML = "<b>" + esc(rc.word) + "</b>" + (rc.count > 1 ? " ×" + rc.count : "") + " – not in dictionary";
     d.appendChild(mm);
     var sg = document.createElement("div"); sg.className = "sugg";
-    rec.sugg.forEach(function(s){
-      var b = document.createElement("button");
-      b.textContent = s;
-      b.addEventListener("click", function(){ replaceWord(rec.word, s); checkSpelling(); });
+    rc.sugg.forEach(function(s){
+      var b = document.createElement("button"); b.textContent = s;
+      b.addEventListener("click", function(){ replaceWord(rc.word, s); checkSpelling(); });
       sg.appendChild(b);
     });
+    var show = document.createElement("button"); show.className = "ghost"; show.textContent = "Show";
+    show.addEventListener("click", function(){ selectRange(rc.first, rc.first + rc.word.length); });
+    sg.appendChild(show);
     var ign = document.createElement("button"); ign.className = "ghost"; ign.textContent = "Ignore";
-    ign.addEventListener("click", function(){ spellIgnore[rec.word.toLowerCase()] = 1; checkSpelling(); });
+    ign.addEventListener("click", function(){ spellIgnore[rc.word.toLowerCase()] = 1; checkSpelling(); });
     sg.appendChild(ign);
-    var add = document.createElement("button"); add.className = "ghost"; add.textContent = "Add to dictionary";
-    add.addEventListener("click", function(){ if(speller){ speller.add(rec.word.replace(/’/g,"'")); } checkSpelling(); });
+    var add = document.createElement("button"); add.className = "ghost"; add.textContent = "Add";
+    add.addEventListener("click", function(){ if(speller) speller.add(rc.word.replace(/’/g,"'")); checkSpelling(); });
     sg.appendChild(add);
     d.appendChild(sg);
     out.appendChild(d);
@@ -925,10 +1097,9 @@ function renderSpell(bad){
 }
 function replaceWord(from, to){
   pushUndo(true);
-  var re = new RegExp("(^|[^A-Za-z'])(" + from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![A-Za-z'])", "g");
+  var re = new RegExp("(^|[^A-Za-z'\\u2019])(" + from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![A-Za-z'\\u2019])", "g");
   memo.value = memo.value.replace(re, function(_, pre){
-    var rep = to;
-    if(/^[A-Z]/.test(from)) rep = to.charAt(0).toUpperCase() + to.slice(1);
+    var rep = /^[A-Z]/.test(from) ? to.charAt(0).toUpperCase() + to.slice(1) : to;
     return pre + rep;
   });
   onMemoChanged();
@@ -943,7 +1114,7 @@ function offlineGrammar(t){
   var f = [], m, re;
   re = /  +/g;                       while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Extra space", rep:" "});
   re = /[ \t]+([,.;:!?])/g;          while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Space before “"+m[1]+"”", rep:m[1]});
-  re = /([,.;:!?])([A-Za-z])/g;      while((m = re.exec(t))){ if(!/\d/.test(m[2]) && !(m[1]==="." && /^[a-z]$/.test(m[2]) && /\b[a-z]\.[a-z]\./i.test(t.substr(Math.max(0,m.index-2),6)))) f.push({i:m.index, len:m[0].length, msg:"Missing space after “"+m[1]+"”", rep:m[1]+" "+m[2]}); }
+  re = /([,.;:!?])([A-Za-z])/g;      while((m = re.exec(t))){ if(!/\d/.test(m[2]) && !/\b[a-z]\.[a-z]\.$/i.test(t.slice(0,m.index+1))) f.push({i:m.index, len:m[0].length, msg:"Missing space after “"+m[1]+"”", rep:m[1]+" "+m[2]}); }
   re = /\b(\w+)\s+\1\b/gi;           while((m = re.exec(t))){ if(m[1].length>1 && !/^(that|had|the)$/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"Repeated word “"+m[1]+"”", rep:m[1]}); }
   re = /\bi\b/g;                     while((m = re.exec(t))) f.push({i:m.index, len:1, msg:"“i” should be capital “I”", rep:"I"});
   re = /\b(could|should|would|must|might)\s+of\b/gi; while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“"+m[1]+" of” → “"+m[1]+" have”", rep:m[1]+" have"});
@@ -951,7 +1122,7 @@ function offlineGrammar(t){
   re = /\bteh\b/gi;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“teh” → “the”", rep:"the"});
   re = /\ba\s+([aeiouAEIOU]\w+)/g;   while((m = re.exec(t))){ if(!/^(uni|use|user|one|euro|ubiqu)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“a "+m[1]+"” → “an "+m[1]+"”", rep:"an "+m[1]}); }
   re = /\ban\s+([bcdfghjklmnpqrstvwxyz]\w+)/gi; while((m = re.exec(t))){ if(!/^(hour|honest|honou?r|heir)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“an "+m[1]+"” → “a "+m[1]+"”", rep:"a "+m[1]}); }
-  re = /([.!?]\s+|\n\s*)([a-z])/g;   while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Sentence should start with a capital", rep:m[1] + m[2].toUpperCase()});
+  re = /([.!?]\s+|\n\s*)([a-z])/g;   while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Sentence should start with a capital", rep:m[1].replace(/[ \t]{2,}/g," ") + m[2].toUpperCase()});
   re = /[!?]{3,}/g;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Excessive punctuation", rep:m[0].charAt(0)});
   re = /[ \t]+$/gm;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Trailing space", rep:""});
   var first = t.replace(/^\s+/, "");
@@ -963,13 +1134,9 @@ function offlineGrammar(t){
 function ltGrammar(t){
   var body = new URLSearchParams();
   body.set("text", t); body.set("language", S.lang); body.set("enabledOnly", "false");
-  return fetch("https://api.languagetool.org/v2/check", {
-    method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body
-  }).then(function(r){ return r.json(); }).then(function(j){
-    return (j.matches || []).map(function(mm){
-      return { i: mm.offset, len: mm.length, msg: mm.message, rep: (mm.replacements && mm.replacements[0]) ? mm.replacements[0].value : null, lt:true };
-    });
-  });
+  return fetch("https://api.languagetool.org/v2/check", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ return (j.matches || []).map(function(mm){ return { i: mm.offset, len: mm.length, msg: mm.message, rep: (mm.replacements && mm.replacements[0]) ? mm.replacements[0].value : null, lt:true }; }); });
 }
 var grammarFindings = [];
 function checkGrammar(){
@@ -979,8 +1146,7 @@ function checkGrammar(){
   var jobs = [Promise.resolve(offlineGrammar(t))];
   if(S.useLT && t.trim()) jobs.push(ltGrammar(t).catch(function(){ toast("LanguageTool unreachable"); return []; }));
   Promise.all(jobs).then(function(parts){
-    var all = [].concat.apply([], parts);
-    var keyed = {};
+    var all = [].concat.apply([], parts), keyed = {};
     all.forEach(function(f){ var k = f.i + ":" + f.len + ":" + f.msg; if(!keyed[k]) keyed[k] = f; });
     grammarFindings = Object.keys(keyed).map(function(k){ return keyed[k]; }).sort(function(a,b){ return a.i - b.i; });
     renderGrammar();
@@ -990,18 +1156,22 @@ function renderGrammar(){
   var out = $("#grammarOut");
   if(!grammarFindings.length){ out.innerHTML = "<div class='empty'>No issues found. ✅</div>"; return; }
   out.innerHTML = "";
-  grammarFindings.forEach(function(f, idx){
+  grammarFindings.forEach(function(f){
     var d = document.createElement("div"); d.className = "item";
     var snip = esc(memo.value.substr(Math.max(0, f.i - 18), 18) + "〈" + memo.value.substr(f.i, f.len) + "〉" + memo.value.substr(f.i + f.len, 18)).replace(/\n/g, "↵");
     var mm = document.createElement("div"); mm.className = "m";
-    mm.innerHTML = (f.lt ? "" : "") + esc(f.msg) + "<br><span style='color:var(--gold-deep)'>…" + snip + "…</span>";
+    mm.innerHTML = esc(f.msg) + "<br><span class='snip'>…" + snip + "…</span>";
     d.appendChild(mm);
     var sg = document.createElement("div"); sg.className = "sugg";
     if(f.rep != null){
-      var b = document.createElement("button"); b.textContent = "Fix → " + (f.rep === "" ? "(remove)" : JSON.stringify(f.rep).slice(1, -1));
+      var b = document.createElement("button");
+      b.textContent = "Fix → " + (f.rep === "" ? "(remove)" : f.rep.replace(/\n/g,"↵"));
       b.addEventListener("click", function(){ applyGrammar(f); });
       sg.appendChild(b);
     }
+    var show = document.createElement("button"); show.className = "ghost"; show.textContent = "Show";
+    show.addEventListener("click", function(){ selectRange(f.i, f.i + f.len); });
+    sg.appendChild(show);
     var ig = document.createElement("button"); ig.className = "ghost"; ig.textContent = "Dismiss";
     ig.addEventListener("click", function(){ grammarFindings.splice(grammarFindings.indexOf(f), 1); renderGrammar(); });
     sg.appendChild(ig);
@@ -1018,18 +1188,104 @@ function applyGrammar(f){
 }
 function fixAllGrammar(){
   if(!grammarFindings.length){ toast("Nothing to fix"); return; }
+  var list = grammarFindings.filter(function(f){ return f.rep != null; }).slice().sort(function(a,b){ return a.i - b.i; });
+  if(!list.length){ toast("Nothing to fix"); return; }
   pushUndo(true);
-  grammarFindings.slice().sort(function(a,b){ return b.i - a.i; }).forEach(function(f){
-    if(f.rep == null) return;
-    memo.value = memo.value.slice(0, f.i) + f.rep + memo.value.slice(f.i + f.len);
-  });
-  onMemoChanged();
-  checkGrammar();
-  toast("Applied fixes");
+  var src = memo.value, res = "", cursor = 0, applied = 0;
+  for(var k = 0; k < list.length; k++){
+    var f = list[k];
+    if(f.i < cursor) continue;              // range overlaps an earlier fix – skip, re-check will catch it
+    res += src.slice(cursor, f.i) + f.rep;
+    cursor = f.i + f.len;
+    applied++;
+  }
+  res += src.slice(cursor);
+  memo.value = res;
+  onMemoChanged(); checkGrammar();
+  toast("Applied " + applied + " fix" + (applied !== 1 ? "es" : ""));
 }
 $("#btnGrammar").addEventListener("click", checkGrammar);
 $("#btnGrammarFixAll").addEventListener("click", fixAllGrammar);
 $("#btnGrammarClear").addEventListener("click", function(){ grammarFindings = []; $("#grammarOut").innerHTML = "<div class='empty'>Not checked yet.</div>"; });
+
+/* ================================================================
+   FIND & REPLACE
+   ================================================================ */
+function findRe(){
+  var q = $("#findText").value;
+  if(!q) return null;
+  var esc2 = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if($("#findWord").checked) esc2 = "\\b" + esc2 + "\\b";
+  return new RegExp(esc2, $("#findCase").checked ? "g" : "gi");
+}
+function findFrom(start, dir){
+  var re = findRe(); if(!re){ $("#findStat").textContent = "Enter something to find."; return; }
+  var t = memo.value, hits = [], m;
+  while((m = re.exec(t))){ hits.push([m.index, m.index + m[0].length]); if(m.index === re.lastIndex) re.lastIndex++; }
+  if(!hits.length){ $("#findStat").textContent = "No matches."; return; }
+  var idx;
+  if(dir > 0) idx = hits.findIndex(function(h){ return h[0] >= start; });
+  else { idx = -1; for(var i=0;i<hits.length;i++){ if(hits[i][1] <= start) idx = i; } }
+  if(idx < 0) idx = dir > 0 ? 0 : hits.length - 1;
+  var h = hits[idx];
+  memo.focus(); memo.setSelectionRange(h[0], h[1]);
+  var line = t.slice(0, h[0]).split("\n").length;
+  memo.scrollTop = Math.max(0, (line - 3) * S.font * 1.5);
+  $("#findStat").textContent = (idx + 1) + " of " + hits.length + " match" + (hits.length>1?"es":"");
+}
+$("#btnFindNext").addEventListener("click", function(){ findFrom(memo.selectionEnd, 1); });
+$("#btnFindPrev").addEventListener("click", function(){ findFrom(memo.selectionStart, -1); });
+$("#btnReplaceOne").addEventListener("click", function(){
+  var re = findRe(); if(!re) return;
+  var s = memo.selectionStart, e = memo.selectionEnd, sel = memo.value.slice(s, e);
+  var one = new RegExp(re.source, re.flags.replace("g",""));
+  if(e > s && one.test(sel)){
+    pushUndo(true);
+    memo.value = memo.value.slice(0, s) + $("#replaceText").value + memo.value.slice(e);
+    onMemoChanged();
+  }
+  findFrom(s + $("#replaceText").value.length, 1);
+});
+$("#btnReplaceAll").addEventListener("click", function(){
+  var re = findRe(); if(!re){ return; }
+  var n = (memo.value.match(re) || []).length;
+  if(!n){ $("#findStat").textContent = "No matches."; return; }
+  pushUndo(true);
+  memo.value = memo.value.replace(re, $("#replaceText").value);
+  onMemoChanged();
+  $("#findStat").textContent = "Replaced " + n + ".";
+});
+
+/* ================================================================
+   STATS
+   ================================================================ */
+function syllables(w){
+  w = w.toLowerCase().replace(/[^a-z]/g, "");
+  if(w.length <= 3) return w.length ? 1 : 0;
+  w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "").replace(/^y/, "");
+  var m = w.match(/[aeiouy]{1,2}/g);
+  return m ? m.length : 1;
+}
+function refreshStats(){
+  var t = memo.value, out = $("#statsOut");
+  var words = (t.trim().match(/\S+/g) || []);
+  var sents = (t.match(/[^.!?\n]+[.!?]+|\S[^.!?\n]*$/g) || []).filter(function(s){ return s.trim(); });
+  var paras = t.split(/\n{2,}/).filter(function(p){ return p.trim(); });
+  var syl = words.reduce(function(a, w){ return a + syllables(w); }, 0);
+  var wc = words.length, sc = Math.max(1, sents.length);
+  var flesch = wc ? Math.round(206.835 - 1.015 * (wc / sc) - 84.6 * (syl / wc)) : 0;
+  var chNo = t.replace(/\s/g, "").length;
+  out.innerHTML =
+    row("Words", wc) + row("Characters", t.length + " (" + chNo + " without spaces)") +
+    row("Sentences", sents.length) + row("Paragraphs", paras.length) +
+    row("Avg words / sentence", wc ? (wc / sc).toFixed(1) : "0") +
+    row("Reading ease (Flesch)", flesch + " " + fleschTag(flesch)) +
+    row("Speaking time", fmtDur(Math.round(wc / (200 * S.ttsRate) * 60))) +
+    row("Reading time", fmtDur(Math.round(wc / 238 * 60)));
+  function row(k, v){ return "<div class='item'><div class='m'><b>" + k + ":</b> " + esc(String(v)) + "</div></div>"; }
+}
+function fleschTag(f){ return f>=70?"(easy)":f>=50?"(fairly hard)":f>=30?"(hard)":f<=0?"":"(very hard)"; }
+$("#btnStats").addEventListener("click", refreshStats);
 
 /* ================================================================
    EXPORT / CLIPBOARD
@@ -1041,48 +1297,42 @@ function copyText(t){
     catch(e){ rej(e); }
   });
 }
-$("#btnCopy").addEventListener("click", function(){
-  if(!memo.value){ toast("Nothing to copy"); return; }
-  copyText(memo.value).then(function(){ toast("Copied to clipboard"); }).catch(function(){ toast("Copy failed"); });
-});
-$("#btnCopyClear").addEventListener("click", function(){
-  if(!memo.value){ toast("Nothing to copy"); return; }
-  copyText(memo.value).then(function(){ pushUndo(true); memo.value = ""; onMemoChanged(); toast("Copied – note cleared"); });
-});
-$("#btnShare").addEventListener("click", function(){
-  if(!memo.value){ toast("Nothing to share"); return; }
-  if(navigator.share) navigator.share({ text: memo.value }).catch(function(){});
-  else { copyText(memo.value).then(function(){ toast("Sharing not supported – copied instead"); }); }
-});
-$("#btnDownload").addEventListener("click", function(){
-  var blob = new Blob([memo.value], { type: "text/plain" });
+function download(name, mime){
+  var blob = new Blob([memo.value], { type: mime });
   var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "dictation-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".txt";
+  a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function stamp(){ return new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"); }
+$("#btnCopy").addEventListener("click", function(){ if(!memo.value){ toast("Nothing to copy"); return; } copyText(memo.value).then(function(){ toast("Copied to clipboard"); }).catch(function(){ toast("Copy failed"); }); });
+$("#btnCopyClear").addEventListener("click", function(){ if(!memo.value){ toast("Nothing to copy"); return; } copyText(memo.value).then(function(){ pushUndo(true); memo.value = ""; onMemoChanged(); toast("Copied – note cleared"); }); });
+$("#btnShare").addEventListener("click", function(){ if(!memo.value){ toast("Nothing to share"); return; } if(navigator.share) navigator.share({ text: memo.value }).catch(function(){}); else copyText(memo.value).then(function(){ toast("Sharing not supported – copied instead"); }); });
+$("#btnPaste").addEventListener("click", function(){
+  if(!navigator.clipboard || !navigator.clipboard.readText){ toast("Paste not supported – use Ctrl+V in the note"); return; }
+  navigator.clipboard.readText().then(function(txt){ if(!txt) return; pushUndo(true); var s = memo.selectionStart; memo.value = memo.value.slice(0,s) + txt + memo.value.slice(memo.selectionEnd); onMemoChanged(); toast("Pasted"); }).catch(function(){ toast("Clipboard blocked"); });
 });
-$("#btnClear").addEventListener("click", function(){
-  if(!memo.value){ return; }
-  if(confirm("Clear the whole note? (Undo can bring it back this session.)")){ pushUndo(true); memo.value = ""; onMemoChanged(); }
-});
+$("#btnDownload").addEventListener("click", function(){ download("dictation-" + stamp() + ".txt", "text/plain"); });
+$("#btnDownloadMd").addEventListener("click", function(){ download("dictation-" + stamp() + ".md", "text/markdown"); });
+$("#btnPrint").addEventListener("click", function(){ closeSheet(); setTimeout(function(){ window.print(); }, 120); });
+$("#btnClear").addEventListener("click", function(){ if(!memo.value) return; if(confirm("Clear the whole note? (Undo can bring it back this session.)")){ pushUndo(true); memo.value = ""; onMemoChanged(); } });
 $("#btnUndo").addEventListener("click", doUndo);
+$("#btnRedo").addEventListener("click", doRedo);
 
 /* ================================================================
-   EDIT TOOLS
+   EDIT / FORMAT TOOLS
    ================================================================ */
 function titleCase(s){
   var small = /^(a|an|and|as|at|but|by|for|if|in|of|on|or|the|to|vs?\.?|via)$/i;
   return s.replace(/\w[^\s]*/g, function(w, i){
     var prev = s.slice(0, i).replace(/\s+$/, "").slice(-1);
-    var sentenceStart = i === 0 || prev === "" || /[.!?:\n]/.test(prev);
-    if(!sentenceStart && small.test(w)) return w.toLowerCase();
+    var sStart = i === 0 || prev === "" || /[.!?:\n]/.test(prev);
+    if(!sStart && small.test(w)) return w.toLowerCase();
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   });
 }
 function sentenceCase(s){
-  s = s.toLowerCase();
-  return s.replace(/(^\s*|[.!?]\s+|\n\s*)([a-z])/g, function(_, p, c){ return p + c.toUpperCase(); }).replace(/\bi\b/g, "I");
+  return s.toLowerCase().replace(/(^\s*|[.!?]\s+|\n\s*)([a-z])/g, function(_, p, c){ return p + c.toUpperCase(); }).replace(/\bi\b/g, "I");
 }
 document.querySelectorAll("[data-fmt]").forEach(function(b){
   b.addEventListener("click", function(){
@@ -1096,23 +1346,44 @@ document.querySelectorAll("[data-fmt]").forEach(function(b){
     else if(f === "blanks") v = v.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
     else if(f === "quotes") v = v.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
     else if(f === "stamp"){ var d = new Date().toLocaleString(); v = v + (v && !/\n$/.test(v) ? "\n" : "") + d + "\n"; }
-    memo.value = v; onMemoChanged(); toast("Done");
+    memo.value = v; onMemoChanged(); refreshStats(); toast("Done");
   });
 });
 
 /* ================================================================
+   COMMANDS SHEET
+   ================================================================ */
+function renderCmds(){
+  var rows = [
+    ["full stop / comma / question mark", "punctuation . , ?"],
+    ["exclamation mark / colon / semicolon", "! : ;"],
+    ["new line", "line break"],
+    ["new paragraph", "blank line + new paragraph"],
+    ["new bullet", "start a • bullet line"],
+    ["open quote / close quote", "“ ”"],
+    ["open bracket / close bracket", "( )"],
+    ["hyphen / dash / ellipsis", "- – …"],
+    ["capital <word>", "capitalise the next word"],
+    ["all caps <word>", "UPPERCASE the next word"],
+    ["caps on / caps off", "hold everything in UPPERCASE"],
+    ["scratch that", "remove the last thing inserted"],
+    ["delete last word / sentence / line", "trim the end of the note"],
+    ["join lines", "merge single line-breaks into spaces"],
+    ["stop dictation", "pause listening"]
+  ];
+  $("#cmdsList").innerHTML = rows.map(function(r){ return "<div class='crow'><code>" + esc(r[0]) + "</code><span>" + esc(r[1]) + "</span></div>"; }).join("");
+}
+
+/* ================================================================
    SETTINGS WIRING
    ================================================================ */
-function bindToggle(id, key, after){
-  var el = $(id); el.checked = !!S[key];
-  el.addEventListener("change", function(){ S[key] = el.checked; save(); if(after) after(); });
-}
-function bindSelect(id, key, after){
-  var el = $(id); el.value = S[key];
-  el.addEventListener("change", function(){ S[key] = el.value; save(); if(after) after(); });
-}
-bindSelect("#setLang", "lang", function(){ if(rec){ rec.lang = S.lang; } if(mode === "listening"){ pauseRec(); startRec(); } });
+function bindToggle(id, key, after){ var el = $(id); el.checked = !!S[key]; el.addEventListener("change", function(){ S[key] = el.checked; save(); if(after) after(); }); }
+function bindSelect(id, key, after){ var el = $(id); el.value = S[key]; el.addEventListener("change", function(){ S[key] = el.value; save(); if(after) after(); }); }
+bindSelect("#setMode", "mode", function(){ setModeIdle(); reflectMode(); });
+bindSelect("#setLang", "lang", function(){ if(rec) rec.lang = S.lang; if(mode === "listening"){ pauseRec(); startRec(); } loadVoices(); });
+bindSelect("#setSilence", "silence", armSilence);
 bindToggle("#setPunct", "punct");
+bindToggle("#setNumbers", "numbers");
 bindToggle("#setCap", "cap");
 bindToggle("#setInterim", "interim", function(){ if(rec) rec.interimResults = S.interim; if(!S.interim) $("#interim").textContent = ""; });
 bindToggle("#setContinuous", "continuous");
@@ -1123,50 +1394,84 @@ bindSelect("#setDict", "dict", function(){ speller = null; spellerFor = ""; });
 var setFont = $("#setFont"); setFont.value = S.font; applyFont();
 setFont.addEventListener("input", function(){ S.font = +setFont.value; applyFont(); save(); });
 function applyFont(){ document.documentElement.style.setProperty("--memo-fs", S.font + "px"); $("#setFontV").textContent = S.font; }
-
 bindToggle("#gLT", "useLT");
 $("#ttsFollow").checked = S.ttsFollow;
 $("#ttsFollow").addEventListener("change", function(){ S.ttsFollow = $("#ttsFollow").checked; save(); });
 function bindRange(id, vid, key){
   var el = $(id), lbl = $(vid);
   el.value = S[key]; lbl.textContent = (+S[key]).toFixed(1);
-  el.addEventListener("input", function(){ S[key] = +el.value; lbl.textContent = (+el.value).toFixed(1); save(); if(key === "ttsRate") updCount(); });
+  el.addEventListener("input", function(){ S[key] = +el.value; lbl.textContent = (+el.value).toFixed(1); save(); if(key === "ttsRate"){ updCount(); } });
 }
 bindRange("#ttsRate", "#ttsRateV", "ttsRate");
 bindRange("#ttsPitch", "#ttsPitchV", "ttsPitch");
 bindRange("#ttsVol", "#ttsVolV", "ttsVol");
-$("#ttsVoice").addEventListener("change", function(){
-  var v = voices[parseInt($("#ttsVoice").value)];
-  if(v){ S.ttsVoice = v.name; save(); }
+$("#ttsVoice").addEventListener("change", function(){ var v = voices[parseInt($("#ttsVoice").value)]; if(v){ S.ttsVoice = v.name; save(); } });
+$("#btnReset").addEventListener("click", function(){
+  if(!confirm("Reset all settings to defaults? Your notes are kept.")) return;
+  S = Object.assign({}, DEF); save(); location.reload();
 });
 
 /* ================================================================
    INSTALL PROMPT
    ================================================================ */
 var deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", function(e){
-  e.preventDefault(); deferredPrompt = e;
-  $("#grpInstall").style.display = "";
-});
-$("#btnInstall").addEventListener("click", function(){
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; $("#grpInstall").style.display = "none"; });
+window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferredPrompt = e; $("#grpInstall").style.display = ""; });
+$("#btnInstall").addEventListener("click", function(){ if(!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; $("#grpInstall").style.display = "none"; }); });
+
+/* ================================================================
+   DRAG & DROP A TEXT FILE
+   ================================================================ */
+["dragover","dragenter"].forEach(function(ev){ memo.addEventListener(ev, function(e){ e.preventDefault(); memo.classList.add("dragover"); }); });
+["dragleave","dragend","drop"].forEach(function(ev){ memo.addEventListener(ev, function(){ memo.classList.remove("dragover"); }); });
+memo.addEventListener("drop", function(e){
+  var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!file) return;
+  e.preventDefault();
+  file.text().then(function(txt){
+    if(memo.value.trim() && !confirm("Replace the current note with “" + file.name + "”?")){
+      pushUndo(true); var s = memo.selectionStart; memo.value = memo.value.slice(0,s) + txt + memo.value.slice(memo.selectionEnd);
+    } else { pushUndo(true); memo.value = txt; }
+    onMemoChanged(); toast("Loaded " + file.name);
+  });
 });
 
 /* ================================================================
    KEYBOARD
    ================================================================ */
 document.addEventListener("keydown", function(e){
-  if(e.ctrlKey && e.code === "Space"){ e.preventDefault(); if(mode === "listening") pauseRec(); else startRec(); }
+  var mod = e.ctrlKey || e.metaKey;
+  if(mod && e.code === "Space"){ e.preventDefault(); if(S.mode==="ptt"){ toast("Push-to-talk: hold the button"); return; } if(mode === "listening") pauseRec(); else startRec(); }
   else if(e.key === "Escape" && mode !== "idle"){ setModeIdle(); }
+  else if(mod && !e.shiftKey && (e.key === "z" || e.key === "Z")){ e.preventDefault(); doUndo(); }
+  else if(mod && (e.key === "y" || (e.shiftKey && (e.key === "z" || e.key === "Z")))){ e.preventDefault(); doRedo(); }
+  else if(mod && (e.key === "f" || e.key === "F")){ e.preventDefault(); openSheet("edit"); $("#findText").focus(); }
+  else if(mod && (e.key === "s" || e.key === "S")){ e.preventDefault(); download("dictation-" + stamp() + ".txt", "text/plain"); }
+  else if(mod && e.key === "Enter"){ e.preventDefault(); play(false); }
 });
+
+/* ================================================================
+   SHARE-TARGET / SHORTCUT PARAMS
+   ================================================================ */
+function handleParams(){
+  var p = new URLSearchParams(location.search);
+  var shared = [p.get("title"), p.get("text"), p.get("url")].filter(Boolean).join("\n");
+  if(shared){ pushUndo(true); memo.value = (memo.value ? memo.value.replace(/\s*$/, "") + "\n\n" : "") + shared; onMemoChanged(); toast("Added shared text"); }
+  if(p.get("action") === "new") $("#btnNewNote").click();
+  if(p.get("action") === "dictate" && Recog){ setTimeout(function(){ try{ startRec(); }catch(e){} }, 400); }
+  if(shared || p.get("action")){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+}
 
 /* ================================================================
    INIT
    ================================================================ */
+loadNotes();
+$("#setMode").value = S.mode;
 updCount();
 reflectMode();
+handleParams();
+if(new URLSearchParams(location.search).get("debug") === "1"){
+  window.DSRDICT = { commit: commit, wordsToNumbers: wordsToNumbers, applyCaps: applyCaps, buildChunk: buildChunk, S: S };
+}
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){ navigator.serviceWorker.register("service-worker.js").catch(function(){}); });
 }

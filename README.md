@@ -1,51 +1,92 @@
 # DSR Dictation
 
 Hands-free English dictation into a large notepad, with **after-the-fact** spell and grammar
-checking, clipboard export, and text-to-speech playback in a wide choice of voices.
-Single-file web app in the DSR house style (gold-on-black), installable as an Android PWA.
+checking, multi-note storage, clipboard export, and text-to-speech playback in a wide choice of
+voices. Single-file web app in the DSR house style (gold-on-black), installable as an Android PWA.
+
+> There is also a separate **native Lazarus** "DSR Dictation" desktop app (Whisper + SAPI engines)
+> at `C:\Lazarus Projects\DSR Dictation`. This repo is the **web / Android** one.
 
 ## Files
 | file | purpose |
 |------|---------|
 | `index.html` | the whole app (UI + logic, no build step) |
 | `icon.svg` | app / launcher icon (gold microphone on black) |
-| `manifest.json` | PWA manifest |
+| `manifest.json` | PWA manifest — includes `share_target` (share text into the app) and `shortcuts` |
 | `service-worker.js` | offline shell cache + cache-first for the jsDelivr spell dictionaries |
 
-## Speech engine
+## Speech engine — the free, highest-accuracy choice
 Live dictation uses the browser **Web Speech API** (`SpeechRecognition`). In Chrome — desktop
-and Android — this routes audio to **Google's speech service**, which is the most accurate
-speech-to-text you can use for free with no API key and no backend, and the only option that is
-genuinely real-time on a phone. Requirements: Chrome/Chromium, an internet connection, HTTPS.
+and Android — this routes audio to **Google's speech service**, the same engine as Gboard voice
+typing. It is the most accurate speech-to-text usable **for free** with no API key and no
+backend, and the only option that is genuinely real-time on a phone. Requirements: Chrome /
+Chromium, an internet connection, HTTPS (GitHub Pages is fine).
 
-Everything else — typing, spell check, grammar check, Read aloud, export — works **offline**
-once the app (and, on first use, the ~1 MB dictionary) has been cached.
+Everything else — typing, spell check, grammar check, statistics, notes, Read aloud, export —
+works **offline** once the app (and, on first use, the ~1 MB dictionary) is cached.
 
-*Possible follow-up:* a selectable offline engine (Whisper via `transformers.js` / WebGPU) for
-private, no-cloud transcription at the cost of a model download and chunked (non-instant) results.
+## Features (v1b)
+**Dictation**
+- Large auto-saving memo; **multiple named notes** (new / rename / duplicate / delete / switch),
+  each saved to `localStorage`.
+- Modes: **Hands-free (continuous)** with auto-restart after pauses, or **Push-to-talk** (hold
+  the button). Optional **auto-pause after 10/20/30/60 s of silence**.
+- Live **mic level meter**, interim ("as you speak") text, **screen wake-lock** while dictating.
+- **Spoken punctuation & commands** (full list in-app under "? commands"): full stop, comma,
+  question mark, new line/paragraph, new bullet, open/close quote, brackets, hyphen/dash/ellipsis,
+  `capital <word>`, `all caps <word>`, `caps on` / `caps off`, `scratch that`,
+  `delete last word` / `sentence` / `line`, `join lines`, `stop dictation`.
+- **Convert spoken numbers to digits** (opt-in): "twenty five" → 25, "three point one four" →
+  3.14, "one hundred percent" → 100%. (Ambiguous times like "nine thirty" are a known limitation.)
+- Auto-capitalise sentences and stand-alone "I"/"I'm"; smart spacing around punctuation.
+- Accent picker (AU/GB/US/NZ/IE/IN/CA/ZA), profanity filter, insert-at-cursor vs append-to-end,
+  adjustable note font size.
 
-## Features
-- Big auto-saving memo (localStorage); survives reload/close.
-- Start / Pause / Resume / Stop, live mic level meter, interim ("as you speak") text.
-- "Keep listening after pauses" — auto-restarts recognition so long dictation doesn't drop.
-- Spoken punctuation & commands (toggle): *full stop, comma, question mark, new line,
-  new paragraph, new bullet, open/close quote, capital <word>, all caps <word>*;
-  *"scratch that"* removes the last insert; *"stop dictation"* pauses.
-- Auto-capitalise sentences & stand-alone "i", smart spacing around punctuation.
-- Accent picker (en-AU/GB/US/NZ/IE/IN/CA/ZA), profanity filter, screen wake-lock,
-  insert-at-cursor vs append-to-end, adjustable note font size.
-- **Spelling** (nspell + Hunspell dictionary, en-AU/GB/US/CA) — on demand, with suggestions,
-  Ignore, Add-to-dictionary.
-- **Grammar & style** — fast offline checks (double spaces, space-before-punctuation,
-  missing space after punctuation, repeated words, a/an, could-of, sentence capitalisation,
-  trailing spaces, missing terminal stop…) plus optional deeper check via LanguageTool
-  (online, opt-in). Per-item Fix or Fix-all.
-- **Read aloud** — every `speechSynthesis` voice, grouped by language; rate / pitch / volume;
-  Play / Pause / Stop; word-highlight follow-along; reads the selection if text is highlighted.
-- **Export** — Copy all, Copy & clear, Web Share, Download .txt.
-- **Edit tools** — Sentence case / lower / UPPER / Title Case, tidy spaces, remove blank lines,
+**After-the-fact proofing**
+- **Spelling** — real Hunspell dictionary (AU/GB/US/CA) via `nspell`; suggestions, Ignore, Add,
+  and **tap a word to jump to it** in the note.
+- **Grammar & style** — fast offline checks (double spaces, space before/after punctuation,
+  repeated words, a/an, "could of", sentence capitalisation, trailing spaces, missing final
+  stop…) + optional deeper **LanguageTool** online check (opt-in). Per-item Fix, **overlap-safe
+  Fix-all**, tap-to-jump.
+- **Find & replace** (match case / whole word / replace all).
+- **Statistics** — words, characters, sentences, paragraphs, avg words/sentence, Flesch reading
+  ease, speaking & reading time.
+
+**Read aloud**
+- Every installed `speechSynthesis` voice, grouped by language (☁ = online voice);
+  rate / pitch / volume; Play / From-cursor / Pause / Stop; **word-highlight follow-along**;
+  reads just the selection if text is highlighted.
+
+**Export & edit**
+- Copy all, Copy & clear, Web Share, Paste in, Download **.txt** / **.md**, **Print**.
+- Reformat: Sentence case / lower / UPPER / Title Case, tidy spaces, remove blank lines,
   straighten quotes, insert date-time.
-- Session Undo (button + native Ctrl+Z). Ctrl+Space toggles dictation, Esc stops.
+- Session **Undo / Redo** (50 deep) + native Ctrl+Z.
+- Drop a `.txt` / `.md` file onto the note to load it.
+
+**Keyboard**: Ctrl+Space toggle dictation · Esc stop · Ctrl+Z / Ctrl+Y undo/redo ·
+Ctrl+F find · Ctrl+S download · Ctrl+Enter read aloud.
+
+**PWA**: `?debug=1` exposes internal helpers on `window.DSRDICT` for testing. Manifest
+`share_target` lets you share text from other apps into a new note; `shortcuts` give
+"New note" and "Start dictation" long-press actions.
+
+## Backlog / roadmap
+- **Offline Whisper engine** (`transformers.js` + WebGPU) as a selectable "private, no-cloud"
+  option — model download (~75 MB base) and chunked, non-instant transcription; the Lazarus
+  build already covers Whisper for the desktop.
+- Real mic **input-gain / noise-gate calibration** with a visible threshold on the meter.
+- Grammar: subject–verb agreement, comma-splice and run-on detection; a proper (non-heuristic)
+  offline grammar model.
+- Spell: personal dictionary that **persists** across sessions (currently session-only "Add").
+- Notes: search/filter, tags, folders; export/import all notes as one JSON; optional cloud
+  sync via a private Worker (as DSR Dashboard does).
+- Wider TTS voices: bundled **Piper** neural voices, or Edge/Azure neural voices via a Worker.
+- Number words: better handling of times, years, ordinals, phone numbers, currency.
+- Punctuation-restoration model for engines that return unpunctuated text.
+- "Read along" that scrolls and highlights in a rendered overlay (not just textarea selection).
+- Language auto-detect; multi-language dictation switching mid-note.
 
 ## Hosting
 Per the usual DSR pattern: create a repo on the `100dsr100-sketch` GitHub account, push these
