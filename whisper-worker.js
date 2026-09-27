@@ -15,19 +15,20 @@ async function hasWebGPU() {
   catch (e) { return false; }
 }
 
-async function load(name) {
+async function load(name, noGpu) {
   if (pipe && model === name) { postMessage({ type: 'ready', device }); return; }
   pipe = null;
   const progress_callback = p => {
     if (p && p.status === 'progress' && p.file) postMessage({ type: 'progress', file: p.file, loaded: p.loaded || 0, total: p.total || 0 });
   };
   // GPU is several times faster where the phone supports it; otherwise quantised WASM
-  if (await hasWebGPU()) {
+  // (skipped once it has failed on this device – otherwise every load re-tries the GPU files)
+  if (!noGpu && await hasWebGPU()) {
     try {
       pipe = await pipeline('automatic-speech-recognition', name, {
         device: 'webgpu', dtype: { encoder_model: 'fp32', decoder_model_merged: 'q4' }, progress_callback });
       device = 'GPU';
-    } catch (e) { pipe = null; }
+    } catch (e) { pipe = null; postMessage({ type: 'gpufail', message: String((e && e.message) || e) }); }
   }
   if (!pipe) {
     pipe = await pipeline('automatic-speech-recognition', name, { device: 'wasm', dtype: 'q8', progress_callback });
@@ -40,7 +41,7 @@ async function load(name) {
 self.onmessage = async (e) => {
   const m = e.data;
   try {
-    if (m.type === 'load') await load(m.model);
+    if (m.type === 'load') await load(m.model, m.noGpu);
     else if (m.type === 'run') {
       if (!pipe) throw new Error('model not loaded');
       const t0 = performance.now();

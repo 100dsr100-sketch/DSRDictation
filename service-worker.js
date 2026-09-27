@@ -2,7 +2,7 @@
    Same-origin: network-first (new deploys picked up immediately), cache fallback offline.
    cdn.jsdelivr.net (spell dictionaries + nspell): cache-first so spell-check works offline
    after the first use. Anything else cross-origin: passthrough. */
-var CACHE = 'dsr-dictation-v7';
+var CACHE = 'dsr-dictation-v8';
 var CDN   = 'dsr-dictation-cdn-v1';
 var SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './whisper-worker.js'];
 
@@ -15,7 +15,9 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE && k !== CDN; })
+      // only our own old shell caches – NOT 'transformers-cache' (the downloaded Whisper models),
+      // which this used to wipe on every app update, forcing a full re-download
+      return Promise.all(keys.filter(function (k) { return k.indexOf('dsr-dictation-') === 0 && k !== CACHE && k !== CDN; })
         .map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );

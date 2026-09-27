@@ -174,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1g</div>
+    <div class="ver">Version 1h</div>
   </div>
 
   <div id="notice"></div>
@@ -435,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1g. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1h. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -1010,6 +1010,10 @@ function whisperWorker(){
       var pct = T ? Math.min(100, Math.floor(L / T * 100)) : 0;
       dlShow("Downloading speech engine (" + name + ") – " + pct + "%", pct, mb(L) + " / " + mb(T) + " MB");
       setMsg("Downloading model " + pct + "%");
+    } else if(m.type === "gpufail"){
+      try{ LS.setItem("dsrdict.noGpu", "1"); }catch(x){}      // never fetch the GPU files again on this device
+      files = {};
+      dlShow("Graphics chip not usable – switching to CPU version…", 0, "");
     } else if(m.type === "ready"){
       files = {};
       if(wLoadCb){ var cb = wLoadCb; wLoadCb = null; cb.res(m.device); }
@@ -1034,7 +1038,8 @@ function whisperLoad(){
   dlShow("Loading speech engine (" + name + ")…", 0, "");
   whisper.loading = new Promise(function(res, rej){
     wLoadCb = { res: res, rej: rej };
-    whisperWorker().postMessage({ type: "load", model: want });
+    var noGpu = false; try{ noGpu = LS.getItem("dsrdict.noGpu") === "1"; }catch(x){}
+    whisperWorker().postMessage({ type: "load", model: want, noGpu: noGpu });
   }).then(function(device){
     whisper.pipe = true; whisper.model = want; whisper.device = device; whisper.loading = null;
     dlHide(); setMsg("Whisper ready (" + device + ")");
