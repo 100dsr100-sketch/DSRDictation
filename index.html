@@ -174,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1i</div>
+    <div class="ver">Version 1j</div>
   </div>
 
   <div id="notice"></div>
@@ -435,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1i. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1j. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -999,13 +999,26 @@ function paintGateMark(){
 /* Whisper runs in whisper-worker.js – on the UI thread a phone froze for the whole
    transcription (seconds to minutes per phrase). The worker also picks WebGPU when available. */
 var wWorker = null, wJobs = {}, wJobId = 0, wLoadCb = null;
+/* crash breadcrumb: what the engine was doing, kept in localStorage. A normal close clears it,
+   so if it's still there on the next start the page died at that stage – show it. */
+function wStage(s){ try{ if(s) LS.setItem("dsrdict.wStage", s + " (" + S.whisperModel.split("/").pop() + ", " + new Date().toLocaleTimeString() + ")"); else LS.removeItem("dsrdict.wStage"); }catch(x){} }
+window.addEventListener("pagehide", function(){ wStage(""); });
+(function(){
+  var last = null; try{ last = LS.getItem("dsrdict.wStage"); }catch(x){}
+  if(last){
+    wStage("");
+    setTimeout(function(){ notice("<b>The offline speech engine stopped unexpectedly last time</b> while " + esc(last) + ". It will use the safer CPU mode from now on. If it keeps happening, switch Settings &rarr; Dictation back to the Google engine."); }, 0);
+  }
+})();
 function whisperWorker(){
   if(wWorker) return wWorker;
   wWorker = new Worker("whisper-worker.js", { type: "module" });
   var files = {};
   wWorker.onmessage = function(e){
     var m = e.data, name = S.whisperModel.split("/").pop();
-    if(m.type === "progress"){
+    if(m.type === "stage"){ wStage(m.stage); dlShow("Speech engine: " + m.stage + "…", 100, ""); }
+    else if(m.type === "progress"){
+      if(!Object.keys(files).length) wStage("downloading the model");
       files[m.file] = { loaded: m.loaded, total: m.total };
       var L = 0, T = 0;
       Object.keys(files).forEach(function(k){ L += files[k].loaded; T += files[k].total; });
@@ -1017,7 +1030,7 @@ function whisperWorker(){
       files = {};
       dlShow("Graphics chip not usable – switching to CPU version…", 0, "");
     } else if(m.type === "ready"){
-      files = {};
+      files = {}; wStage("");
       if(wLoadCb){ var cb = wLoadCb; wLoadCb = null; cb.res(m.device); }
     } else if(m.type === "result" || m.type === "error"){
       if(m.id != null && wJobs[m.id]){ var j = wJobs[m.id]; delete wJobs[m.id]; m.type === "result" ? j.res(m) : j.rej(new Error(m.message)); }
@@ -1046,7 +1059,8 @@ function whisperLoad(){
          model, so the worker never gets to report "gpufail". We mark the attempt first and
          only clear the mark after a GPU transcription succeeds – a leftover mark = it crashed. */
       if(LS.getItem("dsrdict.gpuTrying") === "1"){ LS.setItem("dsrdict.noGpu", "1"); LS.removeItem("dsrdict.gpuTrying"); }
-      noGpu = LS.getItem("dsrdict.noGpu") === "1";
+      // phones: WebGPU in mobile Chrome is new and its drivers crash on this model – CPU only
+      noGpu = IS_ANDROID || /iPhone|iPad/i.test(navigator.userAgent) || LS.getItem("dsrdict.noGpu") === "1";
       if(!noGpu) LS.setItem("dsrdict.gpuTrying", "1");
     }catch(x){}
     whisperWorker().postMessage({ type: "load", model: want, noGpu: noGpu });
@@ -1062,6 +1076,7 @@ function whisperLoad(){
 function whisperRun(audio){
   return new Promise(function(res, rej){
     var id = ++wJobId; wJobs[id] = { res: res, rej: rej };
+    wStage("transcribing " + (audio.length / 16000).toFixed(1) + "s of speech");
     whisperWorker().postMessage({ type: "run", id: id, audio: audio }, [audio.buffer]);
   });
 }
@@ -1149,7 +1164,7 @@ function whisperDrain(){
   whisperRun(audio).then(function(r){
     var txt = r.text || "";
     if(txt && !/^[\(\[].*[\)\]]$/.test(txt) && !/^(you|thank you\.?|thanks for watching\.?|bye\.?)$/i.test(txt)) commit(txt);
-    whisper.lastMs = r.ms;
+    whisper.lastMs = r.ms; wStage("");
     try{ LS.removeItem("dsrdict.gpuTrying"); }catch(x){}      // first real transcription survived → GPU is safe
   }).catch(function(e){
     toast("Transcription failed: " + ((e && e.message) || e));

@@ -24,6 +24,7 @@ async function load(name, noGpu) {
   // GPU is several times faster where the phone supports it; otherwise quantised WASM
   // (skipped once it has failed on this device – otherwise every load re-tries the GPU files)
   if (!noGpu && await hasWebGPU()) {
+    postMessage({ type: 'stage', stage: 'starting the engine on the graphics chip (GPU)' });
     try {
       pipe = await pipeline('automatic-speech-recognition', name, {
         device: 'webgpu', dtype: { encoder_model: 'fp32', decoder_model_merged: 'q4' }, progress_callback });
@@ -31,6 +32,7 @@ async function load(name, noGpu) {
     } catch (e) { pipe = null; postMessage({ type: 'gpufail', message: String((e && e.message) || e) }); }
   }
   if (!pipe) {
+    postMessage({ type: 'stage', stage: 'starting the engine on the CPU' });
     pipe = await pipeline('automatic-speech-recognition', name, { device: 'wasm', dtype: 'q8', progress_callback });
     device = 'CPU';
   }
