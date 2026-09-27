@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="DSR Dictation">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>DSR Dictation</title>
 <style>
   :root{
@@ -168,7 +168,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1d</div>
+    <div class="ver">Version 1e</div>
   </div>
 
   <div id="notice"></div>
@@ -424,7 +424,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1d. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1e. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -494,6 +494,7 @@ function saveText(){
 }
 function paintNoteName(){ var n=getNote(curId); $("#noteName").textContent = n ? (n.name||"Untitled") : "Untitled"; }
 function switchNote(id){
+  clearTimeout(saveTextT);
   var n = getNote(curId); if(n){ n.text = memo.value; n.updated = Date.now(); }
   curId = id; persistNotes();
   memo.value = getNote(curId).text || "";
@@ -528,6 +529,7 @@ function renderNotes(){
   });
 }
 $("#btnNewNote").addEventListener("click", function(){
+  clearTimeout(saveTextT);
   var n = getNote(curId); if(n){ n.text = memo.value; n.updated = Date.now(); }
   var fresh = { id: uid(), name: "Untitled", text: "", created: Date.now(), updated: Date.now() };
   notes.push(fresh); curId = fresh.id; persistNotes();
@@ -553,7 +555,7 @@ $("#notesImportFile").addEventListener("change", function(){
     var added = 0;
     incoming.forEach(function(n){
       if(!n || typeof n.text !== "string") return;
-      notes.push({ id: uid(), name: (n.name || nameFrom(n.text)).slice(0,60), text: n.text,
+      notes.push({ id: uid(), name: (typeof n.name === "string" && n.name.trim() ? n.name : nameFrom(n.text)).slice(0,60), text: n.text,
                    created: n.created || Date.now(), updated: Date.now() });
       added++;
     });
@@ -585,8 +587,8 @@ function fmtDur(s){ if(s<60) return s+"s"; var m=Math.floor(s/60); return m+"m "
 var undoStack = [], redoStack = [], lastUndoPush = 0;
 function pushUndo(force){
   var now = Date.now();
-  if(!force && now - lastUndoPush < 1400 && undoStack.length && undoStack[undoStack.length-1] === undoStack[undoStack.length-1]) { /* still throttle */ }
   if(!force && now - lastUndoPush < 1400) return;
+  if(undoStack.length && undoStack[undoStack.length-1] === memo.value) return;
   lastUndoPush = now;
   undoStack.push(memo.value);
   if(undoStack.length > 50) undoStack.shift();
@@ -605,7 +607,17 @@ function doRedo(){
   onMemoChanged(); toast("Redone");
 }
 function onMemoChanged(){ updCount(); saveText(); }
+/* typing must feed our undo stack too – Ctrl+Z / the Undo button are ours, not the textarea's */
+memo.addEventListener("beforeinput", function(){ pushUndo(false); });
 memo.addEventListener("input", onMemoChanged);
+/* Android kills a backgrounded PWA without warning – flush the debounced save immediately */
+function flushSave(){
+  clearTimeout(saveTextT);
+  var n = getNote(curId);
+  if(n && n.text !== memo.value){ n.text = memo.value; n.updated = Date.now(); if(n.name === "Untitled" || !n.name) n.name = nameFrom(memo.value); persistNotes(); }
+}
+window.addEventListener("pagehide", flushSave);
+document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden") flushSave(); });
 
 /* ---------- sheets ---------- */
 var backdrop = $("#backdrop");
@@ -665,15 +677,26 @@ function buildRec(){
   rec.onresult = onResult;
   rec.onerror = onError;
   rec.onend = function(){
-    if(mode === "listening" && !manualStop && ((S.mode === "continuous" && S.continuous) || IS_ANDROID)){
-      var gap = Date.now() - lastStart;
-      var wait = gap < 700 ? 900 : 120;
-      clearTimeout(restartT);
-      restartT = setTimeout(function(){ if(mode==="listening"){ try{ rec.start(); }catch(e){} } }, wait);
-    } else if(mode === "listening" && S.mode === "continuous" && !manualStop){
-      setModeIdle();
+    recRunning = false;
+    // Android often ends a session without ever marking the last phrase final – keep it
+    if(pendingInterim){ var p = pendingInterim; pendingInterim = ""; $("#interim").textContent = ""; commit(p); }
+    if(mode === "listening" && !manualStop){
+      if(S.mode === "ptt" || S.continuous || IS_ANDROID){
+        var gap = Date.now() - lastStart;
+        var wait = gap < 700 ? 900 : 120;
+        clearTimeout(restartT);
+        restartT = setTimeout(function(){ if(mode === "listening" && !manualStop) safeStart(0); }, wait);
+      } else setModeIdle();
     }
   };
+}
+var recRunning = false, pendingInterim = "";
+/* rec.start() throws if the previous session hasn't finished ending (fast pause→resume):
+   retry instead of silently sitting in "Listening" with nothing running */
+function safeStart(tries){
+  if(recRunning) return;
+  try{ rec.start(); recRunning = true; }
+  catch(e){ if(tries < 8) setTimeout(function(){ if(mode === "listening" && !manualStop) safeStart(tries + 1); }, 250); }
 }
 function onError(e){
   var err = e.error || "";
@@ -701,8 +724,9 @@ function startRec(){
   rec.interimResults = S.interim;
   rec.lang = S.lang;
   if("profanityFilter" in rec) rec.profanityFilter = S.profanity;
-  manualStop = false; mode = "listening";
-  try{ rec.start(); }catch(e){}
+  manualStop = false; mode = "listening"; pendingInterim = "";
+  clearTimeout(restartT);
+  safeStart(0);
   reflectMode(); if(!IS_ANDROID) startMeter(); armSilence();
   if(S.wake) reqWake();
   if(window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.cancel();
@@ -740,7 +764,9 @@ rb.addEventListener("click", function(){
   if(S.mode === "ptt") return;
   if(mode === "listening") pauseRec(); else startRec();
 });
-rb.addEventListener("pointerdown", function(e){ if(S.mode==="ptt" && !rb.disabled){ e.preventDefault(); startRec(); } });
+rb.addEventListener("pointerdown", function(e){ if(S.mode==="ptt" && !rb.disabled){ e.preventDefault(); try{ rb.setPointerCapture(e.pointerId); }catch(x){} startRec(); } });
+// Android long-press = context menu / haptic "select" → pointercancel would end push-to-talk
+rb.addEventListener("contextmenu", function(e){ if(S.mode==="ptt") e.preventDefault(); });
 ["pointerup","pointerleave","pointercancel"].forEach(function(ev){
   rb.addEventListener(ev, function(){ if(S.mode==="ptt" && mode==="listening") pauseRec(); });
 });
@@ -751,24 +777,27 @@ function onResult(e){
   var interim = "";
   for(var i = e.resultIndex; i < e.results.length; i++){
     var r = e.results[i];
-    if(r.isFinal) commit(r[0].transcript);
+    if(r.isFinal){ commit(r[0].transcript); pendingInterim = ""; }
     else interim += r[0].transcript;
   }
+  if(interim) pendingInterim = interim;
   if(IS_ANDROID) pulseMeter(60);
   $("#interim").textContent = S.interim ? interim : "";
   armSilence();
 }
 
 var CMD = {
-  "full stop":".", "period":".", "point":".", "comma":",", "question mark":"?",
-  "exclamation mark":"!", "exclamation point":"!", "colon":":", "semicolon":";", "semi colon":";",
-  "new line":"\n", "next line":"\n", "line break":"\n",
+  /* only words that don't occur in ordinary speech – "point", "period", "quote", "dash",
+     "hash", "colon", "hyphen", "apostrophe" used to fire mid-sentence ("the point is" → "the . is") */
+  "full stop":".", "comma":",", "question mark":"?",
+  "exclamation mark":"!", "exclamation point":"!", "colon mark":":", "semicolon":";", "semi colon":";",
+  "new line":"\n", "newline":"\n", "next line":"\n", "line break":"\n",
   "new paragraph":"\n\n", "next paragraph":"\n\n",
   "open bracket":"(", "close bracket":")", "open parenthesis":"(", "close parenthesis":")",
-  "open quote":"“", "close quote":"”", "quote":"\"", "apostrophe":"’",
-  "hyphen":"-", "dash":" – ", "ellipsis":"…", "dot dot dot":"…",
-  "new bullet":"\n• ", "bullet point":"\n• ", "new heading":"\n\n",
-  "ampersand":"&", "percent sign":"%", "at sign":"@", "hash":"#", "asterisk":"*",
+  "open quote":"“", "close quote":"”",
+  "hyphen mark":"-", "dash mark":" – ", "ellipsis":"…", "dot dot dot":"…",
+  "new bullet":"\n• ", "bullet point":"\n• ",
+  "ampersand":"&", "percent sign":"%", "at sign":"@", "hash sign":"#", "hashtag":"#", "asterisk":"*",
   "smiley face":"🙂", "sad face":"🙁", "winky face":"😉"
 };
 var HUG_LEFT = {".":1,",":1,"?":1,"!":1,":":1,";":1,")":1,"”":1,"…":1,"%":1};
@@ -800,7 +829,7 @@ function commit(raw){
     if(S.punct && k3 && CMD[k3] != null){ pushCmd(toks, CMD[k3]); i += 2; continue; }
     if(S.punct && k2 && CMD[k2] != null){ pushCmd(toks, CMD[k2]); i += 1; continue; }
     if(S.punct && CMD[k1] != null){ pushCmd(toks, CMD[k1]); continue; }
-    if(S.punct && (k1==="capital"||k1==="capitalise"||k1==="capitalize") && words[i+1]){ i++; toks.push({t:"text", v:capFirst(words[i])}); continue; }
+    if(S.punct && (k1==="capitalise"||k1==="capitalize") && words[i+1]){ i++; toks.push({t:"text", v:capFirst(words[i])}); continue; }
     if(S.punct && k1==="all" && cleanKey(words[i+1]||"")==="caps" && words[i+2]){ i += 2; toks.push({t:"text", v:words[i].toUpperCase()}); continue; }
     toks.push({t:"text", v:w});
   }
@@ -843,13 +872,17 @@ function leadSep(existing, chunk){
   if(/^[.,?!:;)”…%]/.test(chunk) || chunk.charAt(0) === "\n") return "";
   return " ";
 }
+/* text ending in an abbreviation (e.g. / i.e. / U.S. / Mr. / Dr.) – the next word isn't a new sentence */
+var ABBREV_END = /(?:^|[\s(“"'])(?:(?:[a-z]\.){2,}|mr\.|mrs\.|ms\.|dr\.|st\.|vs\.|approx\.|no\.)\s*$/i;
 function capFirst(w){ return w.charAt(0).toUpperCase() + w.slice(1); }
 function applyCaps(chunk){
   var ctx = currentText();
-  var atSentence = ctx === "" || /[.!?…]["'”)]?\s*$/.test(ctx) || /\n\s*$/.test(ctx);
+  var atSentence = ctx === "" || (/[.!?…]["'”)]?\s*$/.test(ctx) && !ABBREV_END.test(ctx)) || /\n\s*$/.test(ctx);
   if(atSentence) chunk = chunk.replace(/^(\s*[\(“"']?\s*)([a-z])/, function(_,p,c){ return p + c.toUpperCase(); });
-  chunk = chunk.replace(/([.!?…]\s+|\n\s*(?:• )?)([a-z])/g, function(_,p,c){ return p + c.toUpperCase(); });
-  chunk = chunk.replace(/\bi\b/g, "I").replace(/\bi('|’)(m|ll|ve|d|s|re)\b/gi, function(_,ap,su){ return "I" + ap + su; });
+  chunk = chunk.replace(/([.!?…]\s+|\n\s*(?:• )?)([a-z])/g, function(all,p,c,off,str){
+    return (p.charAt(0) !== "\n" && ABBREV_END.test(ctx + " " + str.slice(0, off + p.length))) ? all : p + c.toUpperCase();
+  });
+  chunk = chunk.replace(/\bi\b(?!\.e\.)/g, "I").replace(/\bi('|’)(m|ll|ve|d|s|re)\b/gi, function(_,ap,su){ return "I" + ap + su; });
   return chunk;
 }
 function insertText(str){
@@ -869,6 +902,7 @@ function insertText(str){
 }
 function scratchLast(){
   if(!lastInsert) return;
+  pushUndo(true);
   if(lastInsertRange){
     var a = lastInsertRange[0], b = lastInsertRange[1];
     if(memo.value.slice(a,b) === lastInsert){ memo.value = memo.value.slice(0,a) + memo.value.slice(b); try{ memo.setSelectionRange(a,a); }catch(e){} }
@@ -995,8 +1029,18 @@ function whisperFlush(sr){
   var tailN = Math.min(total, Math.round(sr * 0.2));
   var tail = merged.slice(total - tailN);
   whisper.buf = [tail]; whisper.bufLen = tail.length; whisper.speaking = false; whisper.quiet = 0;
-  whisper.queue.push(merged);
+  whisper.queue.push(sr === 16000 ? merged : resampleTo16k(merged, sr));
   whisperDrain();
+}
+/* Whisper needs 16 kHz; if the device refused a 16 kHz AudioContext we get 44.1/48 kHz */
+function resampleTo16k(src, sr){
+  var ratio = sr / 16000, n = Math.floor(src.length / ratio), out = new Float32Array(n);
+  for(var i = 0; i < n; i++){
+    var a = Math.floor(i * ratio), b = Math.min(src.length, Math.floor((i + 1) * ratio)), s = 0;
+    for(var j = a; j < b; j++) s += src[j];          // box-filter average = cheap anti-alias
+    out[i] = b > a ? s / (b - a) : src[a];
+  }
+  return out;
 }
 function whisperDrain(){
   if(whisper.busy || !whisper.queue.length || !whisper.pipe) return;
@@ -1077,6 +1121,7 @@ function refreshMicList(prompt){
 }
 $("#btnMicTest").addEventListener("click", function(){
   var stat = $("#micStat");
+  if(mode === "listening"){ stat.textContent = "Pause dictation first – the test needs the microphone to itself."; return; }
   stat.textContent = "Testing… speak now.";
   refreshMicList(true); startMeter();
   var t0 = Date.now(), peak = 0;
@@ -1103,7 +1148,7 @@ document.addEventListener("visibilitychange", function(){
 /* ================================================================
    TEXT TO SPEECH
    ================================================================ */
-var voices = [], ttsQueue = [], ttsIdx = 0, ttsPaused = false, ttsWatch = null;
+var voices = [], ttsQueue = [], ttsIdx = 0, ttsPaused = false, ttsWatch = null, ttsGen = 0;
 function loadVoices(){
   voices = window.speechSynthesis ? (speechSynthesis.getVoices() || []) : [];
   var sel = $("#ttsVoice"); sel.innerHTML = "";
@@ -1150,14 +1195,15 @@ function play(fromCursor){
   if(!text.trim()){ toast("Nothing to read"); return; }
   if(mode === "listening") pauseRec();
   ttsQueue = splitSentences(text).map(function(seg){ return { s: seg.s, at: base + seg.at }; });
-  ttsIdx = 0; ttsPaused = false;
+  ttsIdx = 0; ttsPaused = false; ttsGen++;
+  $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause";
   speakNext();
   clearInterval(ttsWatch);
   ttsWatch = setInterval(function(){ if(speechSynthesis.speaking && !speechSynthesis.paused && !ttsPaused) speechSynthesis.resume(); }, 9000);
 }
 function speakNext(){
   if(ttsIdx >= ttsQueue.length){ endTts(); return; }
-  var item = ttsQueue[ttsIdx];
+  var item = ttsQueue[ttsIdx], gen = ttsGen;
   var u = new SpeechSynthesisUtterance(item.s);
   var vi = parseInt($("#ttsVoice").value);
   if(voices[vi]){ u.voice = voices[vi]; u.lang = voices[vi].lang; }
@@ -1169,22 +1215,32 @@ function speakNext(){
     var e = ci; while(e < full.length && /\S/.test(full[e])) e++;
     if(e > s){ try{ memo.setSelectionRange(s, e); }catch(x){} }
   };
-  u.onend = function(){ if(!ttsPaused){ ttsIdx++; speakNext(); } };
-  u.onerror = function(){ ttsIdx++; speakNext(); };
+  /* cancel() fires onend/onerror on the dying utterance: the gen check stops Stop/Pause
+     from "continuing" to the next sentence */
+  u.onend = function(){ if(gen === ttsGen && !ttsPaused){ ttsIdx++; speakNext(); } };
+  u.onerror = function(){ if(gen === ttsGen && !ttsPaused){ ttsIdx++; speakNext(); } };
   $("#stMode").textContent = "Reading";
   speechSynthesis.speak(u);
 }
 function endTts(){ clearInterval(ttsWatch); ttsWatch = null; ttsPaused = false; $("#stMode").textContent = mode==="listening"?"Listening":(mode==="paused"?"Paused":"Idle"); }
 $("#btnPlay").addEventListener("click", function(){ play(false); });
 $("#btnPlayCursor").addEventListener("click", function(){ play(true); });
+/* pause/resume = cancel + re-speak the current sentence: speechSynthesis.pause() does nothing
+   (or stops dead) on Android, and Chrome desktop drops paused speech after ~15s */
 $("#btnPauseTts").addEventListener("click", function(){
   if(!("speechSynthesis" in window)) return;
-  if(speechSynthesis.speaking && !speechSynthesis.paused){ speechSynthesis.pause(); ttsPaused = true; $("#btnPauseTts").innerHTML = "&#9654; Resume"; }
-  else if(speechSynthesis.paused){ speechSynthesis.resume(); ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; }
+  if(ttsPaused){
+    ttsPaused = false; ttsGen++; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause";
+    speakNext();
+  } else if(ttsWatch && ttsIdx < ttsQueue.length){
+    ttsPaused = true; ttsGen++; speechSynthesis.cancel();
+    $("#btnPauseTts").innerHTML = "&#9654; Resume"; $("#stMode").textContent = "Reading paused";
+  }
 });
-$("#btnStopTts").addEventListener("click", function(){ if("speechSynthesis" in window) speechSynthesis.cancel(); ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; endTts(); });
+$("#btnStopTts").addEventListener("click", function(){ ttsGen++; if("speechSynthesis" in window) speechSynthesis.cancel(); ttsQueue = []; ttsPaused = false; $("#btnPauseTts").innerHTML = "&#10073;&#10073; Pause"; endTts(); });
 $("#btnPreview").addEventListener("click", function(){
   if(!("speechSynthesis" in window)) return;
+  ttsGen++; ttsQueue = []; ttsPaused = false; endTts();
   speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance("This is a preview of the selected voice for DSR Dictation.");
   var vi = parseInt($("#ttsVoice").value);
@@ -1272,7 +1328,7 @@ function checkSpelling(){
       if(sp.correct(norm)) continue;
       var key = w.toLowerCase();
       if(seen[key]){ seen[key].count++; continue; }
-      var rc = { word: w, first: m.index, count: 1, sugg: sp.suggest(norm).slice(0, 6) };
+      var rc = { word: w, norm: norm, first: m.index, count: 1, sugg: null };   // suggestions filled lazily – nspell.suggest is slow
       seen[key] = rc; bad.push(rc);
     }
     renderSpell(bad);
@@ -1280,8 +1336,9 @@ function checkSpelling(){
     out.innerHTML = "<div class='empty'>Couldn't load the dictionary. Check your connection and try again, or pick a different dictionary in Settings.</div>";
   });
 }
+var spellGen = 0;
 function renderSpell(bad){
-  var out = $("#spellOut");
+  var out = $("#spellOut"), gen = ++spellGen, slots = [];
   if(!bad.length){ out.innerHTML = "<div class='empty'>No spelling issues found. ✅</div>"; return; }
   out.innerHTML = "";
   bad.forEach(function(rc){
@@ -1290,11 +1347,8 @@ function renderSpell(bad){
     mm.innerHTML = "<b>" + esc(rc.word) + "</b>" + (rc.count > 1 ? " ×" + rc.count : "") + " – not in dictionary";
     d.appendChild(mm);
     var sg = document.createElement("div"); sg.className = "sugg";
-    rc.sugg.forEach(function(s){
-      var b = document.createElement("button"); b.textContent = s;
-      b.addEventListener("click", function(){ replaceWord(rc.word, s); checkSpelling(); });
-      sg.appendChild(b);
-    });
+    var slot = document.createElement("span"); slot.className = "hint"; slot.textContent = "finding suggestions…";
+    sg.appendChild(slot); slots.push({ rc: rc, slot: slot });
     var show = document.createElement("button"); show.className = "ghost"; show.textContent = "Show";
     show.addEventListener("click", function(){ selectRange(rc.first, rc.first + rc.word.length); });
     sg.appendChild(show);
@@ -1307,6 +1361,21 @@ function renderSpell(bad){
     d.appendChild(sg);
     out.appendChild(d);
   });
+  // one word per tick so the UI stays responsive; abandoned if the list is re-rendered
+  (function next(k){
+    if(gen !== spellGen || k >= slots.length || !speller) return;
+    var o = slots[k], sugg = [];
+    try{ sugg = speller.suggest(o.rc.norm).slice(0, 6); }catch(e){}
+    var frag = document.createDocumentFragment();
+    sugg.forEach(function(s){
+      var b = document.createElement("button"); b.textContent = s;
+      b.addEventListener("click", function(){ replaceWord(o.rc.word, s); checkSpelling(); });
+      frag.appendChild(b);
+    });
+    if(!sugg.length){ var none = document.createElement("span"); none.className = "hint"; none.textContent = "no suggestions"; frag.appendChild(none); }
+    o.slot.replaceWith(frag);
+    setTimeout(function(){ next(k + 1); }, 0);
+  })(0);
 }
 function replaceWord(from, to){
   pushUndo(true);
@@ -1327,15 +1396,15 @@ function offlineGrammar(t){
   var f = [], m, re;
   re = /  +/g;                       while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Extra space", rep:" "});
   re = /[ \t]+([,.;:!?])/g;          while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Space before “"+m[1]+"”", rep:m[1]});
-  re = /([,.;:!?])([A-Za-z])/g;      while((m = re.exec(t))){ if(!/\d/.test(m[2]) && !/\b[a-z]\.[a-z]\.$/i.test(t.slice(0,m.index+1))) f.push({i:m.index, len:m[0].length, msg:"Missing space after “"+m[1]+"”", rep:m[1]+" "+m[2]}); }
-  re = /\b(\w+)\s+\1\b/gi;           while((m = re.exec(t))){ if(m[1].length>1 && !/^(that|had|the)$/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"Repeated word “"+m[1]+"”", rep:m[1]}); }
-  re = /\bi\b/g;                     while((m = re.exec(t))) f.push({i:m.index, len:1, msg:"“i” should be capital “I”", rep:"I"});
+  re = /([,.;:!?])([A-Za-z])/g;      while((m = re.exec(t))){ if(!isUrlish(t, m.index)) f.push({i:m.index, len:m[0].length, msg:"Missing space after “"+m[1]+"”", rep:m[1]+" "+m[2]}); }
+  re = /\b(\w+)\s+\1\b/gi;           while((m = re.exec(t))){ if(!/^\d+$/.test(m[1]) && !/^(that|had)$/i.test(m[1]) && !(m[1].length === 1 && !/^[ai]$/i.test(m[1]))) f.push({i:m.index, len:m[0].length, msg:"Repeated word “"+m[1]+"”", rep:m[1]}); }
+  re = /\bi\b(?!\.e\.)/g;            while((m = re.exec(t))){ if(!isUrlish(t, m.index)) f.push({i:m.index, len:1, msg:"“i” should be capital “I”", rep:"I"}); }
   re = /\b(could|should|would|must|might)\s+of\b/gi; while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“"+m[1]+" of” → “"+m[1]+" have”", rep:m[1]+" have"});
   re = /\balot\b/gi;                 while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“alot” → “a lot”", rep:"a lot"});
   re = /\bteh\b/gi;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"“teh” → “the”", rep:"the"});
   re = /\ba\s+([aeiouAEIOU]\w+)/g;   while((m = re.exec(t))){ if(!/^(uni|use|user|one|euro|ubiqu)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“a "+m[1]+"” → “an "+m[1]+"”", rep:"an "+m[1]}); }
   re = /\ban\s+([bcdfghjklmnpqrstvwxyz]\w+)/gi; while((m = re.exec(t))){ if(!/^(hour|honest|honou?r|heir)/i.test(m[1])) f.push({i:m.index, len:m[0].length, msg:"“an "+m[1]+"” → “a "+m[1]+"”", rep:"a "+m[1]}); }
-  re = /([.!?]\s+|\n\s*)([a-z])/g;   while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Sentence should start with a capital", rep:m[1].replace(/[ \t]{2,}/g," ") + m[2].toUpperCase()});
+  re = /([.!?]\s+|\n\s*)([a-z])/g;   while((m = re.exec(t))) if(m[1].charAt(0) === "\n" || (!ABBREV_END.test(t.slice(0, m.index + m[1].length)) && !isUrlish(t, m.index))) f.push({i:m.index, len:m[0].length, msg:"Sentence should start with a capital", rep:m[1].replace(/[ \t]{2,}/g," ") + m[2].toUpperCase()});
   re = /[!?]{3,}/g;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Excessive punctuation", rep:m[0].charAt(0)});
   re = /[ \t]+$/gm;                  while((m = re.exec(t))) f.push({i:m.index, len:m[0].length, msg:"Trailing space", rep:""});
   var first = t.replace(/^\s+/, "");
@@ -1351,6 +1420,15 @@ function offlineGrammar(t){
     while((m = re.exec(t))){ var wc = (m[0].match(/\S+/g) || []).length; if(wc > 40) f.push({i:m.index, len:m[0].length, msg:"Long sentence (" + wc + " words) – consider splitting", rep:null}); }
   }
   return f;
+}
+/* is position i inside a URL / e-mail / file name / abbreviation like e.g. or U.S.? */
+function isUrlish(t, i){
+  var a = i, b = i;
+  while(a > 0 && !/\s/.test(t[a-1])) a--;
+  while(b < t.length && !/\s/.test(t[b])) b++;
+  var tok = t.slice(a, b);
+  return /[@\/\\]|www\.|^[a-z0-9-]+(\.[a-z0-9-]+)*\.(com|net|org|au|io|gov|edu|co|uk|nz|info|app|dev|html?|txt|pdf|docx?|jpe?g|png|mp[34])\b/i.test(tok)
+      || /^\(?([a-z]\.){2,}[a-z]?\.?,?\)?$/i.test(tok);
 }
 function ltGrammar(t){
   var body = new URLSearchParams();
@@ -1549,6 +1627,7 @@ function titleCase(s){
     var prev = s.slice(0, i).replace(/\s+$/, "").slice(-1);
     var sStart = i === 0 || prev === "" || /[.!?:\n]/.test(prev);
     if(!sStart && small.test(w)) return w.toLowerCase();
+    if(/^[A-Z0-9]{2,}$/.test(w) || /[a-z][A-Z]/.test(w)) return w;   // keep NASA, iPhone, McDonald
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   });
 }
@@ -1563,7 +1642,7 @@ document.querySelectorAll("[data-fmt]").forEach(function(b){
     else if(f === "lower") v = v.toLowerCase();
     else if(f === "upper") v = v.toUpperCase();
     else if(f === "title") v = titleCase(v);
-    else if(f === "trim") v = v.replace(/[ \t]+/g, " ").replace(/ +([,.;:!?])/g, "$1").replace(/[ \t]+$/gm, "").replace(/([,.;:!?])(?=[A-Za-z])/g, "$1 ");
+    else if(f === "trim") v = v.replace(/[ \t]+/g, " ").replace(/ +([,.;:!?])/g, "$1").replace(/[ \t]+$/gm, "").replace(/([,.;:!?])(?=[A-Za-z])/g, function(p, _c, off, all){ return isUrlish(all, off) ? p : p + " "; });
     else if(f === "blanks") v = v.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
     else if(f === "quotes") v = v.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
     else if(f === "stamp"){ var d = new Date().toLocaleString(); v = v + (v && !/\n$/.test(v) ? "\n" : "") + d + "\n"; }
@@ -1577,14 +1656,15 @@ document.querySelectorAll("[data-fmt]").forEach(function(b){
 function renderCmds(){
   var rows = [
     ["full stop / comma / question mark", "punctuation . , ?"],
-    ["exclamation mark / colon / semicolon", "! : ;"],
+    ["exclamation mark / colon mark / semicolon", "! : ;"],
     ["new line", "line break"],
     ["new paragraph", "blank line + new paragraph"],
     ["new bullet", "start a • bullet line"],
     ["open quote / close quote", "“ ”"],
     ["open bracket / close bracket", "( )"],
-    ["hyphen / dash / ellipsis", "- – …"],
-    ["capital <word>", "capitalise the next word"],
+    ["hyphen mark / dash mark / ellipsis", "- – …"],
+    ["hash sign / at sign / percent sign / ampersand", "# @ % &"],
+    ["capitalise <word>", "capitalise the next word"],
     ["all caps <word>", "UPPERCASE the next word"],
     ["caps on / caps off", "hold everything in UPPERCASE"],
     ["scratch that", "remove the last thing inserted"],
@@ -1678,6 +1758,7 @@ memo.addEventListener("drop", function(e){
 document.addEventListener("keydown", function(e){
   var mod = e.ctrlKey || e.metaKey;
   if(mod && e.code === "Space"){ e.preventDefault(); if(S.mode==="ptt"){ toast("Push-to-talk: hold the button"); return; } if(mode === "listening") pauseRec(); else startRec(); }
+  else if(e.key === "Escape" && document.querySelector(".sheet.show")){ closeSheet(); }
   else if(e.key === "Escape" && mode !== "idle"){ setModeIdle(); }
   else if(mod && !e.shiftKey && (e.key === "z" || e.key === "Z")){ e.preventDefault(); doUndo(); }
   else if(mod && (e.key === "y" || (e.shiftKey && (e.key === "z" || e.key === "Z")))){ e.preventDefault(); doRedo(); }
@@ -1711,7 +1792,8 @@ reflectMode();
 handleParams();
 if(new URLSearchParams(location.search).get("debug") === "1"){
   window.DSRDICT = { commit: commit, wordsToNumbers: wordsToNumbers, applyCaps: applyCaps, buildChunk: buildChunk,
-                     offlineGrammar: offlineGrammar, whisper: whisper, whisperLoad: whisperLoad, S: S };
+                     offlineGrammar: offlineGrammar, whisper: whisper, whisperLoad: whisperLoad, S: S,
+                     isUrlish: isUrlish, titleCase: titleCase, resampleTo16k: resampleTo16k, loadSpeller: loadSpeller };
 }
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){ navigator.serviceWorker.register("service-worker.js").catch(function(){}); });

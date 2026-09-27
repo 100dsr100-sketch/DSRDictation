@@ -10,18 +10,56 @@
   "theme_color": "#000000",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ],
   "shortcuts": [
-    { "name": "New note", "short_name": "New", "url": "./index.html?action=new" },
-    { "name": "Start dictation", "short_name": "Dictate", "url": "./index.html?action=dictate" }
+    {
+      "name": "New note",
+      "short_name": "New",
+      "url": "./index.html?action=new"
+    },
+    {
+      "name": "Start dictation",
+      "short_name": "Dictate",
+      "url": "./index.html?action=dictate"
+    }
   ],
   "share_target": {
     "action": "./index.html",
     "method": "GET",
-    "params": { "title": "title", "text": "text", "url": "url" }
-  }
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "id": "./"
 }
