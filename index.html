@@ -168,7 +168,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1c</div>
+    <div class="ver">Version 1d</div>
   </div>
 
   <div id="notice"></div>
@@ -424,7 +424,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1c. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1d. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -632,6 +632,10 @@ $("#btnCmds").addEventListener("click", function(){ openSheet("cmds"); });
    SPEECH RECOGNITION
    ================================================================ */
 var Recog = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+/* Android gives the mic to ONE consumer: a getUserMedia meter stream starves
+   SpeechRecognition (meter moves, no text). Android Chrome's continuous mode also
+   repeats/drops results, so there we run single-utterance sessions + auto-restart. */
+var IS_ANDROID = /Android/i.test(navigator.userAgent);
 var rec = null, mode = "idle", manualStop = false, lastStart = 0, restartT = null;
 var lastInsert = "", lastInsertRange = null, silenceT = null, capsLock = false;
 var whisper = { pipe:null, loading:null, model:"", ctx:null, stream:null, node:null, mute:null, src:null,
@@ -648,16 +652,20 @@ if(!Recog){
 
 function buildRec(){
   rec = new Recog();
-  rec.continuous = true;
+  rec.continuous = !IS_ANDROID;
   rec.interimResults = S.interim;
   rec.maxAlternatives = 1;
   rec.lang = S.lang;
   rec.onstart = function(){ lastStart = Date.now(); };
   rec.onaudiostart = function(){ setMsg("Listening…"); };
+  if(IS_ANDROID){
+    rec.onsoundstart = function(){ pulseMeter(35); };
+    rec.onspeechstart = function(){ pulseMeter(70); };
+  }
   rec.onresult = onResult;
   rec.onerror = onError;
   rec.onend = function(){
-    if(mode === "listening" && !manualStop && S.mode === "continuous" && S.continuous){
+    if(mode === "listening" && !manualStop && ((S.mode === "continuous" && S.continuous) || IS_ANDROID)){
       var gap = Date.now() - lastStart;
       var wait = gap < 700 ? 900 : 120;
       clearTimeout(restartT);
@@ -695,7 +703,7 @@ function startRec(){
   if("profanityFilter" in rec) rec.profanityFilter = S.profanity;
   manualStop = false; mode = "listening";
   try{ rec.start(); }catch(e){}
-  reflectMode(); startMeter(); armSilence();
+  reflectMode(); if(!IS_ANDROID) startMeter(); armSilence();
   if(S.wake) reqWake();
   if(window.speechSynthesis && speechSynthesis.speaking) speechSynthesis.cancel();
 }
@@ -746,6 +754,7 @@ function onResult(e){
     if(r.isFinal) commit(r[0].transcript);
     else interim += r[0].transcript;
   }
+  if(IS_ANDROID) pulseMeter(60);
   $("#interim").textContent = S.interim ? interim : "";
   armSilence();
 }
@@ -1039,6 +1048,13 @@ function startMeter(){
       meterRAF = requestAnimationFrame(tick);
     })();
   }).catch(function(){});
+}
+/* Android web-engine meter: no second mic stream allowed, so flash on speech events */
+var pulseT = null;
+function pulseMeter(pct){
+  if(meterCtx) return;
+  var bar = $("#meterBar"); bar.style.width = pct + "%";
+  clearTimeout(pulseT); pulseT = setTimeout(function(){ bar.style.width = "0%"; }, 350);
 }
 function stopMeter(){
   if(meterRAF) cancelAnimationFrame(meterRAF); meterRAF = null;
