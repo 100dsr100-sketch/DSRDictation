@@ -4,9 +4,14 @@
    Messages in : {type:'load', model} | {type:'run', id, audio:Float32Array(16 kHz)}
    Messages out: {type:'progress', file, loaded, total} | {type:'ready', device}
                  {type:'result', id, text, ms} | {type:'error', id?, message} */
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
+// self-hosted copy (not the CDN): its multi-threaded WASM spawns helper Workers from its own URL,
+// and a Worker script must be same-origin
+import { pipeline, env } from './vendor/transformers.min.js';
 
 env.allowLocalModels = false;
+// multi-threaded WASM needs cross-origin isolation (the service worker adds the headers)
+const THREADS = self.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1)) : 1;
+try { env.backends.onnx.wasm.numThreads = THREADS; } catch (e) {}
 
 let pipe = null, model = '', device = '';
 
@@ -37,6 +42,7 @@ async function load(name, noGpu) {
     device = 'CPU';
   }
   model = name;
+  if (device === 'CPU') device = 'CPU ×' + THREADS;
   postMessage({ type: 'ready', device });
 }
 
@@ -47,8 +53,11 @@ self.onmessage = async (e) => {
     else if (m.type === 'run') {
       if (!pipe) throw new Error('model not loaded');
       const t0 = performance.now();
-      // English-only (.en) models reject task/language options
-      const out = await pipe(m.audio, { chunk_length_s: 30 });
+      // English-only (.en) models reject task/language options.
+      // Cap output tokens to what that much speech could hold (~4 tokens/s): on noise Whisper
+      // can loop repeating itself up to 448 tokens, which on a phone CPU takes minutes.
+      const secs = m.audio.length / 16000;
+      const out = await pipe(m.audio, { chunk_length_s: 30, max_new_tokens: Math.min(440, Math.ceil(secs * 5) + 12) });
       postMessage({ type: 'result', id: m.id, text: ((out && out.text) || '').trim(), ms: Math.round(performance.now() - t0) });
     }
   } catch (err) {

@@ -174,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1j</div>
+    <div class="ver">Version 1k</div>
   </div>
 
   <div id="notice"></div>
@@ -435,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1j. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1k. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -1068,15 +1068,26 @@ function whisperLoad(){
     if(device !== "GPU"){ try{ LS.removeItem("dsrdict.gpuTrying"); }catch(x){} }
     whisper.pipe = true; whisper.model = want; whisper.device = device; whisper.loading = null;
     dlHide(); setMsg("Whisper ready (" + device + ")");
-    toast("Speech engine ready – running on " + (device === "GPU" ? "graphics chip (fast)" : "CPU"));
+    toast("Speech engine ready – running on " + (device === "GPU" ? "graphics chip (fast)" : device.replace("CPU ×", "CPU, ") + (/×1$/.test(device) ? " core (slow)" : " cores")));
     return true;
   }).catch(function(e){ whisper.loading = null; dlHide(); throw e; });
   return whisper.loading;
 }
+/* watchdog: a job that runs far longer than its audio is stuck (or hopelessly slow) –
+   kill the worker so the app doesn't sit on "Transcribing…" forever; the model reloads
+   from the phone's cache on the next phrase */
 function whisperRun(audio){
+  var secs = audio.length / 16000, limit = Math.max(45, secs * 10) * 1000;
   return new Promise(function(res, rej){
-    var id = ++wJobId; wJobs[id] = { res: res, rej: rej };
-    wStage("transcribing " + (audio.length / 16000).toFixed(1) + "s of speech");
+    var id = ++wJobId, dog = setTimeout(function(){
+      if(!wJobs[id]) return;
+      delete wJobs[id];
+      try{ wWorker && wWorker.terminate(); }catch(x){}
+      wWorker = null; whisper.pipe = null; whisper.model = ""; wStage("");
+      rej(new Error("took over " + Math.round(limit / 1000) + "s – skipped that phrase and restarted the engine"));
+    }, limit);
+    wJobs[id] = { res: function(v){ clearTimeout(dog); res(v); }, rej: function(e){ clearTimeout(dog); rej(e); } };
+    wStage("transcribing " + secs.toFixed(1) + "s of speech");
     whisperWorker().postMessage({ type: "run", id: id, audio: audio }, [audio.buffer]);
   });
 }
@@ -1172,8 +1183,10 @@ function whisperDrain(){
     clearInterval(tickT);
     whisper.busy = false;
     var slow = whisper.lastMs && whisper.lastMs > 8000 && S.whisperModel.indexOf("tiny") < 0;
-    setMsg(mode === "listening" ? ("Listening (Whisper, " + (whisper.device || "CPU") + ")" + (whisper.lastMs ? " · last took " + (whisper.lastMs / 1000).toFixed(1) + "s" : "") + (slow ? " – try the Tiny model" : "")) : "");
-    whisperDrain();
+    setMsg(mode === "listening" ? ("Listening (Whisper " + S.whisperModel.split("/").pop().replace("whisper-", "").replace(".en", "") + ", " + (whisper.device || "CPU") + ")" + (whisper.lastMs ? " · last took " + (whisper.lastMs / 1000).toFixed(1) + "s" : "") + (slow ? " – try the Tiny model" : "")) : "");
+    // after a watchdog restart the engine must reload (from cache) before the queue continues
+    if(!whisper.pipe && whisper.queue.length && mode === "listening") whisperLoad().then(whisperDrain).catch(function(){});
+    else whisperDrain();
   });
 }
 function whisperStop(){

@@ -2,9 +2,9 @@
    Same-origin: network-first (new deploys picked up immediately), cache fallback offline.
    cdn.jsdelivr.net (spell dictionaries + nspell): cache-first so spell-check works offline
    after the first use. Anything else cross-origin: passthrough. */
-var CACHE = 'dsr-dictation-v10';
+var CACHE = 'dsr-dictation-v11';
 var CDN   = 'dsr-dictation-cdn-v1';
-var SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './whisper-worker.js'];
+var SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './whisper-worker.js', './vendor/transformers.min.js'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
@@ -51,9 +51,21 @@ self.addEventListener('fetch', function (e) {
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(req, copy); });
       }
-      return res;
+      return withCOI(res);
     }).catch(function () {
-      return caches.match(req).then(function (hit) { return hit || caches.match('./index.html'); });
+      return caches.match(req).then(function (hit) { return withCOI(hit) || caches.match('./index.html').then(withCOI); });
     })
   );
 });
+
+/* Cross-origin isolation. GitHub Pages can't send COOP/COEP headers, so we add them here.
+   Isolation unlocks SharedArrayBuffer → multi-threaded WASM for the offline Whisper engine
+   (single-threaded, a phone took over a minute per phrase). COEP "credentialless" keeps
+   cross-origin CDN/model downloads working without them needing CORP headers. */
+function withCOI(res) {
+  if (!res || res.status === 0 || res.type === 'opaque' || res.type === 'opaqueredirect') return res;
+  var h = new Headers(res.headers);
+  h.set('Cross-Origin-Opener-Policy', 'same-origin');
+  h.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
