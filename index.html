@@ -174,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1f</div>
+    <div class="ver">Version 1g</div>
   </div>
 
   <div id="notice"></div>
@@ -435,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1f. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1g. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -467,6 +467,8 @@ var DEF = {
   ttsVoice:"", ttsRate:1, ttsPitch:1, ttsVol:1, ttsFollow:true, useLT:false, style:false
 };
 var S = load();
+/* phones: Base/Small Whisper on the CPU take far longer than real time – default to Tiny once (v1g) */
+try{ if(/Android|iPhone|iPad/i.test(navigator.userAgent) && !LS.getItem("dsrdict.mig1g")){ LS.setItem("dsrdict.mig1g", "1"); if(S.whisperModel !== "Xenova/whisper-tiny.en"){ S.whisperModel = "Xenova/whisper-tiny.en"; save(); } } }catch(e){}
 function load(){ try{ return Object.assign({}, DEF, JSON.parse(LS.getItem("dsrdict.cfg")||"{}")); }catch(e){ return Object.assign({}, DEF); } }
 function save(){ try{ LS.setItem("dsrdict.cfg", JSON.stringify(S)); }catch(e){} }
 
@@ -992,35 +994,60 @@ function paintGateMark(){
   if(S.engine === "whisper" && mode !== "idle"){ g.hidden = false; g.style.left = Math.min(98, (+S.noiseGate) * 260) + "%"; }
   else g.hidden = true;
 }
+/* Whisper runs in whisper-worker.js – on the UI thread a phone froze for the whole
+   transcription (seconds to minutes per phrase). The worker also picks WebGPU when available. */
+var wWorker = null, wJobs = {}, wJobId = 0, wLoadCb = null;
+function whisperWorker(){
+  if(wWorker) return wWorker;
+  wWorker = new Worker("whisper-worker.js", { type: "module" });
+  var files = {};
+  wWorker.onmessage = function(e){
+    var m = e.data, name = S.whisperModel.split("/").pop();
+    if(m.type === "progress"){
+      files[m.file] = { loaded: m.loaded, total: m.total };
+      var L = 0, T = 0;
+      Object.keys(files).forEach(function(k){ L += files[k].loaded; T += files[k].total; });
+      var pct = T ? Math.min(100, Math.floor(L / T * 100)) : 0;
+      dlShow("Downloading speech engine (" + name + ") – " + pct + "%", pct, mb(L) + " / " + mb(T) + " MB");
+      setMsg("Downloading model " + pct + "%");
+    } else if(m.type === "ready"){
+      files = {};
+      if(wLoadCb){ var cb = wLoadCb; wLoadCb = null; cb.res(m.device); }
+    } else if(m.type === "result" || m.type === "error"){
+      if(m.id != null && wJobs[m.id]){ var j = wJobs[m.id]; delete wJobs[m.id]; m.type === "result" ? j.res(m) : j.rej(new Error(m.message)); }
+      else if(m.type === "error" && wLoadCb){ var c2 = wLoadCb; wLoadCb = null; c2.rej(new Error(m.message)); }
+    }
+  };
+  wWorker.onerror = function(ev){
+    var err = new Error((ev && ev.message) || "Speech engine worker failed to start");
+    if(wLoadCb){ var c = wLoadCb; wLoadCb = null; c.rej(err); }
+    Object.keys(wJobs).forEach(function(k){ wJobs[k].rej(err); delete wJobs[k]; });
+    wWorker = null; whisper.pipe = null; whisper.model = "";
+  };
+  return wWorker;
+}
 function whisperLoad(){
   if(whisper.pipe && whisper.model === S.whisperModel) return Promise.resolve(whisper.pipe);
   if(whisper.loading) return whisper.loading;
-  var name = S.whisperModel.split("/").pop();
+  var name = S.whisperModel.split("/").pop(), want = S.whisperModel;
   setMsg("Loading Whisper (" + name + ")…");
   dlShow("Loading speech engine (" + name + ")…", 0, "");
-  var files = {};   // per-file {loaded,total} – the model is several files, summed for one overall bar
-  whisper.loading = import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2").then(function(t){
-    t.env.allowLocalModels = false;
-    return t.pipeline("automatic-speech-recognition", S.whisperModel, {
-      progress_callback: function(p){
-        if(!p) return;
-        if(p.status === "progress" && p.file){
-          files[p.file] = { loaded: p.loaded || 0, total: p.total || 0 };
-          var L = 0, T = 0;
-          Object.keys(files).forEach(function(k){ L += files[k].loaded; T += files[k].total; });
-          var pct = T ? Math.min(100, Math.floor(L / T * 100)) : 0;
-          dlShow("Downloading speech engine (" + name + ") – " + pct + "%", pct, mb(L) + " / " + mb(T) + " MB");
-          setMsg("Downloading model " + pct + "%");
-        } else if(p.status === "ready"){
-          dlShow("Preparing speech engine…", 100, "");
-        }
-      }
-    });
-  }).then(function(pipe){
-    whisper.pipe = pipe; whisper.model = S.whisperModel; whisper.loading = null;
-    dlHide(); setMsg("Whisper ready"); toast("Speech engine ready"); return pipe;
+  whisper.loading = new Promise(function(res, rej){
+    wLoadCb = { res: res, rej: rej };
+    whisperWorker().postMessage({ type: "load", model: want });
+  }).then(function(device){
+    whisper.pipe = true; whisper.model = want; whisper.device = device; whisper.loading = null;
+    dlHide(); setMsg("Whisper ready (" + device + ")");
+    toast("Speech engine ready – running on " + (device === "GPU" ? "graphics chip (fast)" : "CPU"));
+    return true;
   }).catch(function(e){ whisper.loading = null; dlHide(); throw e; });
   return whisper.loading;
+}
+function whisperRun(audio){
+  return new Promise(function(res, rej){
+    var id = ++wJobId; wJobs[id] = { res: res, rej: rej };
+    whisperWorker().postMessage({ type: "run", id: id, audio: audio }, [audio.buffer]);
+  });
 }
 function mb(b){ return (b / 1048576).toFixed(b < 10485760 ? 1 : 0); }
 function dlShow(label, pct, amt){ $("#dlBox").hidden = false; $("#dlLbl").textContent = label; $("#dlAmt").textContent = amt; $("#dlBar").style.width = pct + "%"; }
@@ -1042,7 +1069,7 @@ function whisperStart(){
     var n = ctx.createScriptProcessor(4096, 1, 1);
     var mute = ctx.createGain(); mute.gain.value = 0;
     whisper.node = n; whisper.mute = mute;
-    whisper.buf = []; whisper.bufLen = 0; whisper.speaking = false; whisper.quiet = 0; whisper.queue = [];
+    whisper.buf = []; whisper.bufLen = 0; whisper.speaking = false; whisper.quiet = 0; whisper.queue = []; whisper.floor = 0;
     var sr = ctx.sampleRate || 16000;
     n.onaudioprocess = function(ev){
       if(!whisper.active) return;
@@ -1052,7 +1079,10 @@ function whisperStart(){
       for(var i = 0; i < inp.length; i++){ var v = inp[i] * g; f[i] = v; sum += v * v; }
       var rms = Math.sqrt(sum / inp.length);
       setMeterRms(rms);
-      var gate = +S.noiseGate || 0.012;
+      // adaptive: track the room's background level so steady noise can't hold the gate open forever
+      if(!whisper.floor || rms < whisper.floor) whisper.floor = whisper.floor ? whisper.floor * 0.8 + rms * 0.2 : rms;
+      else whisper.floor += (rms - whisper.floor) * 0.003;
+      var gate = Math.max(+S.noiseGate || 0.012, whisper.floor * 2.5);
       if(rms > gate){
         whisper.speaking = true; whisper.quiet = 0;
         whisper.buf.push(f); whisper.bufLen += f.length;
@@ -1061,7 +1091,7 @@ function whisperStart(){
         whisper.buf.push(f); whisper.bufLen += f.length; whisper.quiet++;
         if(whisper.quiet >= Math.round(sr / 4096 * 0.6) && whisper.bufLen > sr * 0.4) whisperFlush(sr);
       }
-      if(whisper.bufLen > sr * 20) whisperFlush(sr);
+      if(whisper.bufLen > sr * 12) whisperFlush(sr);
     };
     whisper.src.connect(n); n.connect(mute); mute.connect(ctx.destination);
     setMsg("Listening (Whisper)…");
@@ -1093,15 +1123,24 @@ function resampleTo16k(src, sr){
 function whisperDrain(){
   if(whisper.busy || !whisper.queue.length || !whisper.pipe) return;
   whisper.busy = true;
-  var audio = whisper.queue.shift();
-  setMsg("Transcribing…");
-  // English-only (.en) models reject `task`/`language`; all bundled options are .en
-  whisper.pipe(audio, { chunk_length_s: 30 }).then(function(out){
-    var txt = ((out && out.text) || "").trim();
+  var audio = whisper.queue.shift(), t0 = Date.now(), secs = (audio.length / 16000).toFixed(1);
+  // live elapsed counter so a slow phone visibly works instead of looking frozen
+  var tick = function(){
+    var q = whisper.queue.length;
+    setMsg("Transcribing " + secs + "s of speech… " + Math.round((Date.now() - t0) / 1000) + "s" + (q ? " (+" + q + " waiting)" : ""));
+  };
+  tick(); var tickT = setInterval(tick, 1000);
+  whisperRun(audio).then(function(r){
+    var txt = r.text || "";
     if(txt && !/^[\(\[].*[\)\]]$/.test(txt) && !/^(you|thank you\.?|thanks for watching\.?|bye\.?)$/i.test(txt)) commit(txt);
-  }).catch(function(){}).finally(function(){
+    whisper.lastMs = r.ms;
+  }).catch(function(e){
+    toast("Transcription failed: " + ((e && e.message) || e));
+  }).then(function(){
+    clearInterval(tickT);
     whisper.busy = false;
-    setMsg(mode === "listening" ? "Listening (Whisper)…" : "");
+    var slow = whisper.lastMs && whisper.lastMs > 8000 && S.whisperModel.indexOf("tiny") < 0;
+    setMsg(mode === "listening" ? ("Listening (Whisper, " + (whisper.device || "CPU") + ")" + (whisper.lastMs ? " · last took " + (whisper.lastMs / 1000).toFixed(1) + "s" : "") + (slow ? " – try the Tiny model" : "")) : "");
     whisperDrain();
   });
 }
@@ -1734,7 +1773,7 @@ function whisperFieldsVis(){
   $("#fldWhisperHint").style.display = on ? "" : "none";
 }
 bindSelect("#setEngine", "engine", function(){ setModeIdle(); whisperFieldsVis(); toast(S.engine === "whisper" ? "Whisper engine – downloads on first use" : "Google engine"); });
-bindSelect("#setWhisperModel", "whisperModel", function(){ whisper.pipe = null; whisper.model = ""; });
+bindSelect("#setWhisperModel", "whisperModel", function(){ whisper.pipe = null; whisper.model = ""; if(mode !== "idle") setModeIdle(); });
 bindSelect("#setMode", "mode", function(){ setModeIdle(); reflectMode(); });
 bindSelect("#setLang", "lang", function(){ if(rec) rec.lang = S.lang; if(mode === "listening" && S.engine === "web"){ pauseRec(); startRec(); } loadVoices(); });
 bindSelect("#setSilence", "silence", armSilence);
@@ -1841,7 +1880,7 @@ handleParams();
 if(new URLSearchParams(location.search).get("debug") === "1"){
   window.DSRDICT = { commit: commit, wordsToNumbers: wordsToNumbers, applyCaps: applyCaps, buildChunk: buildChunk,
                      offlineGrammar: offlineGrammar, whisper: whisper, whisperLoad: whisperLoad, S: S,
-                     isUrlish: isUrlish, titleCase: titleCase, resampleTo16k: resampleTo16k, loadSpeller: loadSpeller };
+                     isUrlish: isUrlish, titleCase: titleCase, resampleTo16k: resampleTo16k, loadSpeller: loadSpeller, whisperDrain: whisperDrain };
 }
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){ navigator.serviceWorker.register("service-worker.js").catch(function(){}); });
