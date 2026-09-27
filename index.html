@@ -174,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1h</div>
+    <div class="ver">Version 1i</div>
   </div>
 
   <div id="notice"></div>
@@ -435,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1h. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1i. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -630,6 +630,8 @@ function flushSave(){
   if(n && n.text !== memo.value){ n.text = memo.value; n.updated = Date.now(); if(n.name === "Untitled" || !n.name) n.name = nameFrom(memo.value); persistNotes(); }
 }
 window.addEventListener("pagehide", flushSave);
+// a normal close/background (not a crash) with the GPU engine loaded = GPU didn't kill the page
+window.addEventListener("pagehide", function(){ if(whisper.device === "GPU"){ try{ LS.removeItem("dsrdict.gpuTrying"); }catch(x){} } });
 document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden") flushSave(); });
 
 /* ---------- sheets ---------- */
@@ -1011,7 +1013,7 @@ function whisperWorker(){
       dlShow("Downloading speech engine (" + name + ") – " + pct + "%", pct, mb(L) + " / " + mb(T) + " MB");
       setMsg("Downloading model " + pct + "%");
     } else if(m.type === "gpufail"){
-      try{ LS.setItem("dsrdict.noGpu", "1"); }catch(x){}      // never fetch the GPU files again on this device
+      try{ LS.setItem("dsrdict.noGpu", "1"); LS.removeItem("dsrdict.gpuTrying"); }catch(x){}      // never fetch the GPU files again on this device
       files = {};
       dlShow("Graphics chip not usable – switching to CPU version…", 0, "");
     } else if(m.type === "ready"){
@@ -1038,9 +1040,18 @@ function whisperLoad(){
   dlShow("Loading speech engine (" + name + ")…", 0, "");
   whisper.loading = new Promise(function(res, rej){
     wLoadCb = { res: res, rej: rej };
-    var noGpu = false; try{ noGpu = LS.getItem("dsrdict.noGpu") === "1"; }catch(x){}
+    var noGpu = false;
+    try{
+      /* crash guard: a phone GPU driver can kill the whole page while building/running the
+         model, so the worker never gets to report "gpufail". We mark the attempt first and
+         only clear the mark after a GPU transcription succeeds – a leftover mark = it crashed. */
+      if(LS.getItem("dsrdict.gpuTrying") === "1"){ LS.setItem("dsrdict.noGpu", "1"); LS.removeItem("dsrdict.gpuTrying"); }
+      noGpu = LS.getItem("dsrdict.noGpu") === "1";
+      if(!noGpu) LS.setItem("dsrdict.gpuTrying", "1");
+    }catch(x){}
     whisperWorker().postMessage({ type: "load", model: want, noGpu: noGpu });
   }).then(function(device){
+    if(device !== "GPU"){ try{ LS.removeItem("dsrdict.gpuTrying"); }catch(x){} }
     whisper.pipe = true; whisper.model = want; whisper.device = device; whisper.loading = null;
     dlHide(); setMsg("Whisper ready (" + device + ")");
     toast("Speech engine ready – running on " + (device === "GPU" ? "graphics chip (fast)" : "CPU"));
@@ -1139,6 +1150,7 @@ function whisperDrain(){
     var txt = r.text || "";
     if(txt && !/^[\(\[].*[\)\]]$/.test(txt) && !/^(you|thank you\.?|thanks for watching\.?|bye\.?)$/i.test(txt)) commit(txt);
     whisper.lastMs = r.ms;
+    try{ LS.removeItem("dsrdict.gpuTrying"); }catch(x){}      // first real transcription survived → GPU is safe
   }).catch(function(e){
     toast("Transcription failed: " + ((e && e.message) || e));
   }).then(function(){
