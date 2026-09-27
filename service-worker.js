@@ -2,7 +2,7 @@
    Same-origin: network-first (new deploys picked up immediately), cache fallback offline.
    cdn.jsdelivr.net (spell dictionaries + nspell): cache-first so spell-check works offline
    after the first use. Anything else cross-origin: passthrough. */
-var CACHE = 'dsr-dictation-v5';
+var CACHE = 'dsr-dictation-v6';
 var CDN   = 'dsr-dictation-cdn-v1';
 var SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 

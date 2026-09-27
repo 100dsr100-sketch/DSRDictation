@@ -59,6 +59,12 @@
   .ctl .rec.paused{border-color:var(--gold); color:var(--gold); animation:none;}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,75,75,.45);}50%{box-shadow:0 0 0 7px rgba(255,75,75,0);}}
   .ctl .sm{flex:0 0 46px; min-height:44px; font-size:16px;}
+  .ctl .sm.arm{border-color:var(--rec); color:#fff; background:#5a0000; flex-basis:78px; font-size:13px;}
+  .dl{margin:4px 10px 0; padding:6px 8px; border:1px solid var(--gold-deep); border-radius:6px; background:#0d0d0d;}
+  .dl .lbl{display:flex; justify-content:space-between; gap:8px; color:var(--gold); font-size:12.5px; margin-bottom:5px;}
+  .dl .lbl span:last-child{color:var(--dim); white-space:nowrap;}
+  .dl .bar{height:8px; border-radius:4px; background:#222; overflow:hidden;}
+  .dl .bar > i{display:block; height:100%; width:0%; background:var(--gold); transition:width .2s linear;}
 
   .meter{margin:2px 10px 0; height:6px; border-radius:4px; background:#222; border:1px solid var(--line); overflow:hidden; position:relative;}
   .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--ok),var(--gold),var(--rec)); transition:width .06s linear;}
@@ -154,7 +160,7 @@
 
   @media print{
     body{background:#fff;} #app{border:none; margin:0; height:auto;}
-    .banner,#notice,.ctl,.meter,.interim,.tools,.status,.backdrop,.sheet,.toast{display:none !important;}
+    .banner,#notice,.ctl,.dl,.meter,.interim,.tools,.status,.backdrop,.sheet,.toast{display:none !important;}
     #memo{color:#000; background:#fff; border:none; margin:0; font-size:12pt; white-space:pre-wrap;}
   }
 </style>
@@ -168,7 +174,7 @@
       <div class="t2">DSR Dictation</div>
     </div>
     <div class="note" id="noteName">Untitled</div>
-    <div class="ver">Version 1e</div>
+    <div class="ver">Version 1f</div>
   </div>
 
   <div id="notice"></div>
@@ -176,6 +182,11 @@
   <div class="ctl">
     <button id="btnRec" class="rec" type="button">&#9679; Start dictation</button>
     <button id="btnStop" class="sm" type="button" title="Stop" disabled>&#9632;</button>
+    <button id="btnClearQuick" class="sm" type="button" title="Clear the note and start afresh">&#128465;</button>
+  </div>
+  <div class="dl" id="dlBox" hidden>
+    <div class="lbl"><span id="dlLbl">Downloading speech model…</span><span id="dlAmt"></span></div>
+    <div class="bar"><i id="dlBar"></i></div>
   </div>
   <div class="meter"><i id="meterBar"></i><b id="meterGate" hidden></b></div>
   <div class="interim" aria-live="polite"><span class="txt" id="interim"></span><button class="q" id="btnCmdsQuick" type="button">? commands</button></div>
@@ -424,7 +435,7 @@
 
     <div class="grp">
       <div class="lbl">About</div>
-      <div class="field"><span class="hint">DSR Dictation v1e. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
+      <div class="field"><span class="hint">DSR Dictation v1f. Live dictation needs Chrome (desktop) or Chrome on Android and an internet connection &mdash; it uses Google&rsquo;s speech engine, the most accurate option that&rsquo;s free. Typing, spelling, grammar, notes and read-aloud all work offline once installed.</span></div>
       <div class="rowbtns"><button id="btnReset" class="sec" type="button">Reset all settings</button></div>
     </div>
   </div>
@@ -771,6 +782,27 @@ rb.addEventListener("contextmenu", function(e){ if(S.mode==="ptt") e.preventDefa
   rb.addEventListener(ev, function(){ if(S.mode==="ptt" && mode==="listening") pauseRec(); });
 });
 $("#btnStop").addEventListener("click", setModeIdle);
+/* Clear-and-start-afresh: tap once to arm ("Clear?"), tap again within 3s to wipe. Undo brings it back. */
+var clrArmT = null, clrUndoT = null, clrBtn = $("#btnClearQuick");
+function clrDisarm(){ clearTimeout(clrArmT); clrArmT = null; clearTimeout(clrUndoT); clrUndoT = null; clrBtn.classList.remove("arm"); clrBtn.innerHTML = "&#128465;"; }
+clrBtn.addEventListener("click", function(){
+  if(clrUndoT){ clrDisarm(); doUndo(); return; }      // button shows "Undo" for a few seconds after a clear
+  if(!memo.value){ toast("Note is already empty"); return; }
+  if(!clrArmT){
+    clrBtn.classList.add("arm"); clrBtn.textContent = "Clear?";
+    clrArmT = setTimeout(clrDisarm, 3000);
+    return;
+  }
+  clrDisarm();
+  pushUndo(true);
+  memo.value = ""; $("#interim").textContent = "";
+  lastInsert = ""; lastInsertRange = null; capsLock = false; pendingInterim = "";
+  var cn = getNote(curId); if(cn){ cn.name = "Untitled"; paintNoteName(); }   // re-titles from the new text
+  onMemoChanged();
+  toast("Cleared – ready to start afresh");
+  clrBtn.classList.add("arm"); clrBtn.innerHTML = "&#8630; Undo";
+  clrUndoT = setTimeout(clrDisarm, 6000);
+});
 
 /* ---------- result handling ---------- */
 function onResult(e){
@@ -963,20 +995,36 @@ function paintGateMark(){
 function whisperLoad(){
   if(whisper.pipe && whisper.model === S.whisperModel) return Promise.resolve(whisper.pipe);
   if(whisper.loading) return whisper.loading;
-  setMsg("Loading Whisper (" + S.whisperModel.split("/").pop() + ")…");
+  var name = S.whisperModel.split("/").pop();
+  setMsg("Loading Whisper (" + name + ")…");
+  dlShow("Loading speech engine (" + name + ")…", 0, "");
+  var files = {};   // per-file {loaded,total} – the model is several files, summed for one overall bar
   whisper.loading = import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2").then(function(t){
     t.env.allowLocalModels = false;
     return t.pipeline("automatic-speech-recognition", S.whisperModel, {
       progress_callback: function(p){
-        if(p && p.status === "progress" && p.progress != null) setMsg("Downloading model " + Math.round(p.progress) + "%");
-        else if(p && p.status === "ready") setMsg("Whisper ready");
+        if(!p) return;
+        if(p.status === "progress" && p.file){
+          files[p.file] = { loaded: p.loaded || 0, total: p.total || 0 };
+          var L = 0, T = 0;
+          Object.keys(files).forEach(function(k){ L += files[k].loaded; T += files[k].total; });
+          var pct = T ? Math.min(100, Math.floor(L / T * 100)) : 0;
+          dlShow("Downloading speech engine (" + name + ") – " + pct + "%", pct, mb(L) + " / " + mb(T) + " MB");
+          setMsg("Downloading model " + pct + "%");
+        } else if(p.status === "ready"){
+          dlShow("Preparing speech engine…", 100, "");
+        }
       }
     });
   }).then(function(pipe){
-    whisper.pipe = pipe; whisper.model = S.whisperModel; whisper.loading = null; setMsg("Whisper ready"); return pipe;
-  }).catch(function(e){ whisper.loading = null; throw e; });
+    whisper.pipe = pipe; whisper.model = S.whisperModel; whisper.loading = null;
+    dlHide(); setMsg("Whisper ready"); toast("Speech engine ready"); return pipe;
+  }).catch(function(e){ whisper.loading = null; dlHide(); throw e; });
   return whisper.loading;
 }
+function mb(b){ return (b / 1048576).toFixed(b < 10485760 ? 1 : 0); }
+function dlShow(label, pct, amt){ $("#dlBox").hidden = false; $("#dlLbl").textContent = label; $("#dlAmt").textContent = amt; $("#dlBar").style.width = pct + "%"; }
+function dlHide(){ $("#dlBox").hidden = true; }
 function whisperStart(){
   if(!navigator.mediaDevices || !window.AudioContext && !window.webkitAudioContext){ toast("Audio capture not supported"); return; }
   manualStop = false; mode = "listening"; reflectMode(); paintGateMark();
