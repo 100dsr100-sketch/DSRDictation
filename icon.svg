@@ -1,14 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="13" fill="#000"/>
-  <rect x="2.5" y="2.5" width="59" height="59" rx="11" fill="none" stroke="#D4AF42" stroke-width="2"/>
-  <g fill="none" stroke="#FFD700" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="23" y="9" width="14" height="27" rx="7" fill="#FFD700" stroke="none"/>
-    <path d="M16 30a14 14 0 0 0 28 0"/>
-    <path d="M30 44v8"/>
-    <path d="M21 52h18"/>
-  </g>
-  <g fill="none" stroke="#D4AF42" stroke-width="2.6" stroke-linecap="round">
-    <path d="M48 20a15 15 0 0 1 0 21"/>
-    <path d="M53 15a23 23 0 0 1 0 31"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<!-- gold + one colour accent, matching the DSR Apps widget tile -->
+<rect width="512" height="512" rx="96" fill="#0A0A0A"/>
+<g transform="translate(106,106) scale(12.5)"><path d="M8,14c1.66,0 2.99,-1.34 2.99,-3L11,5c0,-1.66 -1.34,-3 -3,-3S5,3.34 5,5v6c0,1.66 1.34,3 3,3zM13.3,11c0,3 -2.54,5.1 -5.3,5.1S2.7,14 2.7,11H1c0,3.41 2.72,6.23 6,6.72V21h2v-3.28c3.28,-0.48 6,-3.3 6,-6.72h-1.7z" fill="#E8B830"/><path d="M16.5,6.5a6,6 0,0 1,0 7M19.5,4a10,10 0,0 1,0 12" fill="none" stroke="#2EC4B6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>
 </svg>
