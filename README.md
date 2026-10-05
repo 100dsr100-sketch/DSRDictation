@@ -10,10 +10,15 @@ voices. Single-file web app in the DSR house style (gold-on-black), installable 
 ## Files
 | file | purpose |
 |------|---------|
-| `index.html` | the whole app (UI + logic, no build step) |
+| `index.html` | page + styles |
+| `app.js` | the app (notes, proofing, read aloud, export, settings) |
+| `dsr-speech.js` | **the speech engine** — shared with DSR Notes and DSR Secure Store (this repo is the master copy) |
+| `speech-worker.js` | on-device models (transformers.js) off the UI thread — shared too |
+| `vendor/` | transformers.js 3.8.1 + its ONNX runtime (.mjs + 21 MB .wasm), self-hosted: same-origin worker threads + offline |
+| `_headers` | Cloudflare Pages: COOP/COEP → cross-origin isolation → multi-threaded engine from the first visit |
 | `icon.svg` | app / launcher icon (gold microphone on black) |
 | `manifest.json` | PWA manifest — includes `share_target` (share text into the app) and `shortcuts` |
-| `service-worker.js` | offline shell cache + cache-first for the jsDelivr spell dictionaries |
+| `service-worker.js` | offline cache: app network-first, `vendor/` + jsDelivr dictionaries cache-first |
 
 ## Speech engines
 Two, switchable in Settings → Dictation:
@@ -22,12 +27,13 @@ Two, switchable in Settings → Dictation:
    routes audio to Google's speech service, the same engine as Gboard voice typing. Most
    accurate free option, no API key / backend, and the only one that is truly word-by-word
    real-time. Needs Chrome/Chromium, internet, HTTPS.
-2. **Whisper (offline & private)** — `@huggingface/transformers` (transformers.js) runs OpenAI
-   Whisper entirely on-device via WebAssembly / WebGPU. Nothing leaves the device. Model
-   (`whisper-tiny.en` ~40 MB / `base.en` ~75 MB / `small.en` ~250 MB) downloads once from the
-   Hugging Face CDN and is then cached for offline use. Captures the mic, applies a noise-gate
-   VAD, and transcribes in short bursts as you pause — not word-by-word live. Wants a
-   reasonably powerful device.
+2. **Private (on-device)** — transformers.js runs the model entirely on-device (WASM, multi-threaded;
+   WebGPU on desktops). Nothing leaves the device. **Moonshine Tiny** (~28 MB, default) / Moonshine
+   Base (~63 MB) show live words while you talk; Whisper Tiny / Base / Small are still offered.
+   Moonshine's work grows with the length of the phrase, where Whisper always processes a padded
+   30 s window: measured on the dev PC (CPU, 4 threads) a 2 s phrase took **0.12 s vs 1.0 s**, an
+   11 s clip 0.53 s vs 1.55 s. Mic audio comes through an AudioWorklet; an adaptive noise gate
+   cuts phrases at ~0.6 s pauses (clicks/coughs under 0.2 s of voice are dropped).
 
 Everything else — typing, spell check, grammar check, statistics, notes, Read aloud, export —
 works **offline** once the app (and, on first use, the ~1 MB dictionary) is cached.
@@ -83,6 +89,19 @@ Ctrl+F find · Ctrl+S download · Ctrl+Enter read aloud.
 **PWA**: `?debug=1` exposes internal helpers on `window.DSRDICT` for testing. Manifest
 `share_target` lets you share text from other apps into a new note; `shortcuts` give
 "New note" and "Start dictation" long-press actions.
+
+## New in 3a (rewrite)
+- Engine split out into `dsr-speech.js` + `speech-worker.js`, shared with DSR Notes / Secure Store.
+- Moonshine models (default private engine), live words for the private engine, warm start
+  (an already-downloaded model loads as the app opens), AudioWorklet capture.
+- Leaves out um / uh / er; **My words** (say a phrase → any text, or fix a misheard name);
+  new commands: `replace X with Y`, `insert date` / `insert time`, `read that back`, `undo` / `redo`.
+- **Punctuation bar** while listening (. , ? ! ↵ ¶ delete-word scratch).
+- **🎧 Audio file**: transcribe a voice memo / mp3 / m4a on the device (cut at pauses, ≤20 s pieces).
+- Optional **recording** of each dictation, kept with the note (IndexedDB), play / save / delete.
+- Efficiency: one localStorage key per note (was: all notes re-serialised on every save), word count
+  debounced, undo memory capped for long notes, service worker `no-cache` network-first,
+  COOP/COEP from `_headers`.
 
 ## Done in v1c (was backlog)
 - Offline **Whisper engine** (transformers.js) with tiny/base/small model choice.

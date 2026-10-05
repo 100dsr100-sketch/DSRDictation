@@ -1,7 +1,7 @@
 {
   "name": "DSR Dictation",
   "short_name": "DSR Dictation",
-  "description": "Hands-free English dictation into a large notepad, with after-the-fact spell and grammar checking, multi-note storage, clipboard export, and text-to-speech playback in a wide choice of voices.",
+  "description": "Hands-free English dictation into a large notepad - Google or a private on-device engine with live words - plus audio-file transcription, spell and grammar checking, multi-note storage and read-aloud.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

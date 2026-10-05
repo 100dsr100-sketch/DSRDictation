@@ -1,0 +1,5 @@
+# Cloudflare Pages: cross-origin isolation -> SharedArrayBuffer -> multi-threaded on-device speech engine.
+# "credentialless" keeps cross-origin downloads (speech models, spelling dictionaries) working without CORP headers.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
